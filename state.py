@@ -1,5 +1,7 @@
-from typing_extensions import TypedDict
+from typing import TypedDict, Optional
+from models import VideoInfo
 
 class State(TypedDict):
     input: str
-    result: str
+    text: str
+    video_info: Optional[VideoInfo]

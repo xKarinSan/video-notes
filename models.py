@@ -5,3 +5,4 @@ class VideoInfo(BaseModel):
     url: str
     name: str
     date_extracted: datetime
+    contents: str
