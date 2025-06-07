@@ -74,3 +74,6 @@ def extractAudioText(url:str) -> Optional[VideoInfo]:
         except Exception as e:
             print(f"Error processing video: {e}")
             return None
+
+
+# def upload_docs():

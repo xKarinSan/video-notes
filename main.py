@@ -1,9 +1,6 @@
 from dotenv import load_dotenv
-import asyncio
 from langgraph.graph import StateGraph, START, END
 from langchain.chat_models import init_chat_model
-from langchain.agents.agent_types import AgentType
-
 from state import State
 
 # import os
@@ -28,7 +25,9 @@ graph_builder.add_edge("extract_audio_text", END)
 
 graph = graph_builder.compile()
 
+image_data = graph.get_graph().draw_mermaid_png()
+with open("graph_diagram.png", "wb") as f:
+    f.write(image_data)
 
-url = "https://www.youtube.com/watch?v=XBuv4HHTRjI"
-# input("Enter YouTube URL: ")
-result = graph.invoke({"input": url})
+# url = "https://www.youtube.com/watch?v=XBuv4HHTRjI"
+# result = graph.invoke({"input": url})
