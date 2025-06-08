@@ -5,6 +5,7 @@ Tools:
 - upload content to docs/notion
 - content records
 """
+import time
 import os
 import tempfile
 from datetime import datetime
@@ -12,12 +13,16 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
-from langchain_core.tools import tool
 import yt_dlp
 import imageio_ffmpeg
 from openai import OpenAI
 
 from models import VideoInfo
+
+from uuid import uuid4
+import json
+
+
 
 load_dotenv()
 
@@ -28,7 +33,7 @@ def extractAudioText(url:str) -> Optional[VideoInfo]:
     """
     Get the text audio
     """
-    
+    start_time = time.time()
     # 1) download from youtube
     with tempfile.TemporaryDirectory() as tmp_dir:
         output_path = os.path.join(tmp_dir, "audio.%(ext)s")
@@ -46,6 +51,7 @@ def extractAudioText(url:str) -> Optional[VideoInfo]:
             'quiet': True,
         }
         try:
+            extracted_time = datetime.now()
             # 2) extract the audio
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -64,16 +70,33 @@ def extractAudioText(url:str) -> Optional[VideoInfo]:
                 )
 
             contents = transcript.text
+            end_time = time.time()
+            print(f"Processing completed in {end_time-start_time}s")
             return VideoInfo(
-                url = url,
+                url=url,
                 name=title,
-                contents = contents,
-                date_extracted=datetime.now()
+                contents=contents,
+                date_extracted=extracted_time.timestamp() * 1000
             )
 
         except Exception as e:
+            end_time = time.time()
+            print(f"Processing stopped in {end_time-start_time}s")
             print(f"Error processing video: {e}")
             return None
 
 
-# def upload_docs():
+def saveDocs(video:VideoInfo) -> None:
+    print("Saving transcript.....")
+    transcript_id =  uuid4()
+    metadata = video.model_dump()
+    contents = metadata["contents"]
+    metadata.pop("contents")
+    
+    with open(f"transcripts/{transcript_id}.txt","w") as f:
+        f.write(contents)
+    
+    with open(f"metadata/{transcript_id}.json","w",encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=False)
+    print("Notes saved!")
+
