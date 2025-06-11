@@ -16,8 +16,12 @@ from dotenv import load_dotenv
 import yt_dlp
 import imageio_ffmpeg
 from openai import OpenAI
-
 from models import VideoInfo
+from langchain_openai import OpenAIEmbeddings
+from langchain_chroma import Chroma
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 
 from uuid import uuid4
 import json
@@ -29,7 +33,7 @@ load_dotenv()
 client = OpenAI(api_key = os.getenv("OPENAI_API_KEY"))
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
-def extractAudioText(url:str) -> Optional[VideoInfo]:
+def extract_audio_text(url:str) -> Optional[VideoInfo]:
     """
     Get the text audio
     """
@@ -86,17 +90,45 @@ def extractAudioText(url:str) -> Optional[VideoInfo]:
             return None
 
 
-def saveDocs(video:VideoInfo) -> None:
+def save_docs(video:VideoInfo) -> None:
+    """
+    save the video
+    """
     print("Saving transcript.....")
-    transcript_id =  uuid4()
+    video_id =  str(uuid4())
     metadata = video.model_dump()
     contents = metadata["contents"]
     metadata.pop("contents")
     
-    with open(f"transcripts/{transcript_id}.txt","w") as f:
+    # add splitters
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=50,
+        separators=["\n\n", "\n", ".", " ", ""],
+    )
+    chunks = splitter.split_text(contents)
+    
+    
+    # save in vector database
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+    vector_store = Chroma(
+        collection_name="raw_video_transcripts",
+        embedding_function=embeddings,
+        persist_directory="./chroma",  # Where to save data locally, remove if not necessary
+    )
+    
+    documents = [
+        Document(page_content=chunk, metadata={**metadata, "chunk_index": i, "total_chunks": len(chunks)})
+        for i, chunk in enumerate(chunks)
+    ]
+    vector_store.add_documents(documents)
+    
+    # save in file
+    with open(f"transcripts/{video_id}.txt","w") as f:
         f.write(contents)
     
-    with open(f"metadata/{transcript_id}.json","w",encoding="utf-8") as f:
+    with open(f"metadata/{video_id}.json","w",encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
     print("Notes saved!")
+
 
