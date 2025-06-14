@@ -21,6 +21,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import ChatOpenAI
 
 
 from uuid import uuid4
@@ -101,27 +102,29 @@ def save_docs(video:VideoInfo) -> None:
     metadata.pop("contents")
     
     # add splitters
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50,
-        separators=["\n\n", "\n", ".", " ", ""],
-    )
-    chunks = splitter.split_text(contents)
+    # splitter = RecursiveCharacterTextSplitter(
+    #     chunk_size=500,
+    #     chunk_overlap=50,
+    #     separators=["\n\n", "\n", ".", " ", ""],
+    # )
+    # chunks = splitter.split_text(contents)
     
     
     # save in vector database
-    embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-    vector_store = Chroma(
-        collection_name="raw_video_transcripts",
-        embedding_function=embeddings,
-        persist_directory="./chroma",  # Where to save data locally, remove if not necessary
-    )
+    # embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+    # vector_store = Chroma(
+    #     collection_name="raw_video_transcripts",
+    #     embedding_function=embeddings,
+    #     persist_directory="./chroma",  # Where to save data locally, remove if not necessary
+    # )
     
-    documents = [
-        Document(page_content=chunk, metadata={**metadata, "chunk_index": i, "total_chunks": len(chunks)})
-        for i, chunk in enumerate(chunks)
-    ]
-    vector_store.add_documents(documents)
+    # documents = [
+    #     Document(page_content=chunk, metadata={**metadata, "chunk_index": i, "total_chunks": len(chunks)})
+    #     for i, chunk in enumerate(chunks)
+    # ]
+    # vector_store.add_documents(documents)
+    
+    # 
     
     # save in file
     with open(f"transcripts/{video_id}.txt","w") as f:
@@ -130,5 +133,4 @@ def save_docs(video:VideoInfo) -> None:
     with open(f"metadata/{video_id}.json","w",encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
     print("Notes saved!")
-
 
