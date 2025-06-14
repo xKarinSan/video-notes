@@ -1,5 +1,5 @@
 from typing import TypedDict, Optional
-from models import VideoInfo
+from .models import VideoInfo
 
 class State(TypedDict):
     input: str
