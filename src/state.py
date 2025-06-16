@@ -5,3 +5,5 @@ class State(TypedDict):
     input: str
     text: str
     video_info: Optional[VideoInfo]
+    mode: int
+    video_id:str

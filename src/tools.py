@@ -10,6 +10,7 @@ import os
 import tempfile
 from datetime import datetime
 from typing import Optional
+from .prompts import prompt_templates
 
 from dotenv import load_dotenv
 
@@ -17,10 +18,11 @@ import yt_dlp
 import imageio_ffmpeg
 from openai import OpenAI
 from .models import VideoInfo
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.prompts import PromptTemplate
 
 from uuid import uuid4
 import json
@@ -87,7 +89,7 @@ class Tools:
                 print(f"Error processing video: {e}")
                 return None
 
-    def save_docs(self,video:VideoInfo) -> None:
+    def save_docs(self,video:VideoInfo) -> str:
         """
         save the video
         """
@@ -130,5 +132,31 @@ class Tools:
             json.dump(metadata, f, indent=2, ensure_ascii=False)
                     
         print("Notes saved!")
+        return video_id
+    
+    def save_notes(self,video:VideoInfo,mode:int,video_id=str
+                   ) -> None:
+        """
+        generate notes based on the prompts
+        """
+        
+        """
+        user chooses the mode and then trigger the prompt template
+        """
+        if not mode:
+            mode = 0
+        contents = video.contents
+        mode = mode if mode in range(len(prompt_templates)) else 0
+        current_template = PromptTemplate.from_template(prompt_templates[mode])
+        
+        self.client = ChatOpenAI(model="gpt-4", api_key=os.getenv("OPENAI_API_KEY"))
+        chain = current_template | self.client
+
+        res = chain.invoke({"content":contents})
+        
+        os.makedirs("./results",exist_ok=True)
+        with open(f"./results/{video_id}.txt","w") as f:
+            f.write(res.content)
+
 
 
