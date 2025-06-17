@@ -30,17 +30,20 @@ class Workflow:
         return {"input": url, "video_info": res}
 
     def save_video(self,state:State) -> State:
+        print("[save_video],state:",state)
         video_metadata = state["video_info"]
         video_id = self.tools.save_docs(video_metadata)
         return {"video_id":video_id}
     
     def save_notes(self,state:State) -> None:
+        print("[save_notes],state:",state)
         video_metadata = state["video_info"]
         mode = state["mode"]
         self.tools.save_notes(video_metadata,mode,state["video_id"])
-        return state
+        # return state
         
 
     def run(self,url:str,mode:int) -> State:
+        
         return self.workflow.invoke({"input": url,"mode":mode})
 

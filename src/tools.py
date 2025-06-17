@@ -10,7 +10,8 @@ import os
 import tempfile
 from datetime import datetime
 from typing import Optional
-from .prompts import prompt_templates
+from .prompts import prompt_templates, summarise_chunk_prompt, combine_sumamries_prompt
+from .utils.time_tracker import time_counter
 
 from dotenv import load_dotenv
 
@@ -18,9 +19,9 @@ import yt_dlp
 import imageio_ffmpeg
 from openai import OpenAI
 from .models import VideoInfo
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_chroma import Chroma
-from langchain_core.documents import Document
+from langchain_openai import ChatOpenAI
+from langchain_core.runnables import RunnableParallel,Runnable, RunnableLambda
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import PromptTemplate
 
@@ -29,16 +30,21 @@ import json
 
 
 class Tools:
+    @time_counter
     def __init__(self):
         load_dotenv()
         self.client = OpenAI(api_key = os.getenv("OPENAI_API_KEY"))
+        self.langchain_client = ChatOpenAI(model="gpt-4", api_key=os.getenv("OPENAI_API_KEY"))
         self.ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
     
+    @time_counter
     def extract_audio_text(self,url:str) -> Optional[VideoInfo]:
         """
         Get the text audio
         """
-        start_time = time.time()
+        # check if cache is present
+        video_contents = None
+        
         # 1) download from youtube
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = os.path.join(tmp_dir, "audio.%(ext)s")
@@ -74,53 +80,31 @@ class Tools:
                     )
 
                 contents = transcript.text
-                end_time = time.time()
-                print(f"Processing completed in {end_time-start_time}s")
-                return VideoInfo(
+                video_contents = VideoInfo(
                     url=url,
                     name=title,
                     contents=contents,
                     date_extracted=extracted_time.timestamp() * 1000
                 )
+                
+                print("video_contents",video_contents)
+                return video_contents
 
             except Exception as e:
-                end_time = time.time()
-                print(f"Processing stopped in {end_time-start_time}s")
                 print(f"Error processing video: {e}")
                 return None
-
+            
+    @time_counter
     def save_docs(self,video:VideoInfo) -> str:
         """
         save the video
         """
         print("Saving transcript.....")
+        
         video_id =  str(uuid4())
         metadata = video.model_dump()
         contents = metadata["contents"]
         metadata.pop("contents")
-        
-        # add splitters
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=50,
-            separators=["\n\n", "\n", ".", " ", ""],
-        )
-        chunks = splitter.split_text(contents)
-        
-        
-        # save in vector database
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-        vector_store = Chroma(
-            collection_name="raw_video_transcripts",
-            embedding_function=embeddings,
-            persist_directory="./chroma",  # Where to save data locally, remove if not necessary
-        )
-        
-        documents = [
-            Document(page_content=chunk, metadata={**metadata, "chunk_index": i, "total_chunks": len(chunks)})
-            for i, chunk in enumerate(chunks)
-        ]
-        vector_store.add_documents(documents)
         
         # save in file
         os.makedirs("./transcripts", exist_ok=True)
@@ -130,12 +114,11 @@ class Tools:
         os.makedirs("./metadata", exist_ok=True)
         with open(f"./metadata/{video_id}.json","w",encoding="utf-8") as f:
             json.dump(metadata, f, indent=2, ensure_ascii=False)
-                    
-        print("Notes saved!")
         return video_id
     
-    def save_notes(self,video:VideoInfo,mode:int,video_id=str
-                   ) -> None:
+    
+    @time_counter
+    def save_notes(self,video:VideoInfo,mode:int,video_id) -> None:
         """
         generate notes based on the prompts
         """
@@ -146,17 +129,55 @@ class Tools:
         if not mode:
             mode = 0
         contents = video.contents
-        mode = mode if mode in range(len(prompt_templates)) else 0
-        current_template = PromptTemplate.from_template(prompt_templates[mode])
+                
+        #  split further
+        chunks = self._split_chunks(contents)
+        summaries = self._summarise_all_chunks(chunks)
+        combined_summary = self._combine_summaries(summaries)
         
-        self.client = ChatOpenAI(model="gpt-4", api_key=os.getenv("OPENAI_API_KEY"))
-        chain = current_template | self.client
+        mode = mode if mode in range(len(prompt_templates)) else 0
+        
+        current_template = PromptTemplate.from_template(prompt_templates[mode])
+        chain = current_template | self.langchain_client
 
-        res = chain.invoke({"content":contents})
+        res = chain.invoke({"content":combined_summary})
         
         os.makedirs("./results",exist_ok=True)
         with open(f"./results/{video_id}.txt","w") as f:
             f.write(res.content)
+        print("Notes saved!")
 
-
+    @time_counter
+    def _split_chunks(self,original_content = str) -> list[str]:
+        
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=50,
+            separators=["\n\n", "\n", ".", " ", ""],
+        )
+        return splitter.split_text(original_content)
+    
+    def _summarise_single_chunk(self,chunk:str) -> Runnable:
+        summarise_chunk_template = PromptTemplate.from_template(summarise_chunk_prompt)
+        chain = summarise_chunk_template | self.langchain_client
+        return RunnableLambda(lambda x: chain.invoke({"chunk": chunk}).content)
+    
+    @time_counter
+    def _summarise_all_chunks(self,chunks:list[str]) -> list[str]:
+        parallel_chains = RunnableParallel(
+            {
+                f"chunk_{i}": self._summarise_single_chunk(chunk)
+                for i, chunk in enumerate(chunks)
+            }
+        )
+        results_dict = parallel_chains.invoke({})
+        sorted_results = [results_dict[f"chunk_{i}"] for i in range(len(chunks))]
+        return sorted_results
+        
+    @time_counter
+    def _combine_summaries(self,summaries:list[str]) -> str:
+        combine_template = PromptTemplate.from_template(combine_sumamries_prompt)
+        chain = combine_template | self.langchain_client
+        combined_summaries = chain.invoke({"summaries":"\n".join(summaries)})
+        return combined_summaries
 
