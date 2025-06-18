@@ -31,7 +31,6 @@ class Workflow:
         video_metadata = state["video_info"]
         mode = state["mode"]
         self.tools.save_notes(video_metadata,mode,state["video_id"])
-        # return state
         
 
     def run(self,url:str,mode:int) -> State:

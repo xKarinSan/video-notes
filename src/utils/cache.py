@@ -7,10 +7,11 @@ import dbm
 
 class Cache:
     @time_counter
-    def _init__(self):
+    def __init__(self):
         self._cache_path = "cache"
         self._transcripts_path = "./transcripts"
         self._metadata_path = "./metadata"
+        self._summaries_path = "./summaries"
     
     @time_counter
     def get_video_metadata(self,url:str) -> Tuple[Optional[VideoInfo], Optional[str]]:
@@ -78,3 +79,23 @@ class Cache:
         os.makedirs(self._metadata_path, exist_ok=True)
         with open(f"{self._metadata_path}/{video_id}.json","w",encoding="utf-8") as f:
             json.dump(metadata, f, indent=2, ensure_ascii=False)
+            
+    @time_counter
+    def save_video_summary(self,video_id:str,video_summary:str) -> None:
+        """
+        caches the video summary
+        """
+        summary_path = os.path.join(self._summaries_path, f"{video_id}.txt")
+        os.makedirs(self._summaries_path, exist_ok=True)
+        with open(summary_path, 'w', encoding='utf-8') as f:
+            f.write(video_summary)
+            
+    def get_video_summary(self,video_id:str) -> Optional[str]:
+        """
+        retrieves video summary from cache
+        """
+        summary_path = os.path.join(self._summaries_path, f"{video_id}.txt")
+        if os.path.exists(summary_path):
+            with open(summary_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        return None
