@@ -5,7 +5,6 @@ Tools:
 - upload content to docs/notion
 - content records
 """
-import time
 import os
 import tempfile
 from datetime import datetime
@@ -26,8 +25,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import PromptTemplate
 
 from uuid import uuid4
-import json
-
+from typing import Any
+from .utils.cache import Cache
 
 class Tools:
     @time_counter
@@ -36,15 +35,30 @@ class Tools:
         self.client = OpenAI(api_key = os.getenv("OPENAI_API_KEY"))
         self.langchain_client = ChatOpenAI(model="gpt-4", api_key=os.getenv("OPENAI_API_KEY"))
         self.ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+        self.cache = Cache()
+        
+        self._results_path = "./results"
+        
+    @time_counter
+    def extract_video_info(self,url:str) -> dict[Any]:
+        """
+        Get all the video info
+        """
+        # check the URL in the cache
+        video_contents, doc_id = self.cache.get_video_metadata(url)
+        if video_contents and doc_id:
+            return {"video_info":video_contents,"video_id":doc_id}
+        
+        # get the video contents
+        video_contents = self._extract_audio_text(url)
+        doc_id = self._save_docs(video_contents)        
+        return {"video_info":video_contents,"video_id":doc_id}
     
     @time_counter
-    def extract_audio_text(self,url:str) -> Optional[VideoInfo]:
+    def _extract_audio_text(self,url:str) -> Optional[VideoInfo]:
         """
         Get the text audio
-        """
-        # check if cache is present
-        video_contents = None
-        
+        """        
         # 1) download from youtube
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = os.path.join(tmp_dir, "audio.%(ext)s")
@@ -87,7 +101,6 @@ class Tools:
                     date_extracted=extracted_time.timestamp() * 1000
                 )
                 
-                print("video_contents",video_contents)
                 return video_contents
 
             except Exception as e:
@@ -95,25 +108,14 @@ class Tools:
                 return None
             
     @time_counter
-    def save_docs(self,video:VideoInfo) -> str:
+    def _save_docs(self,video:VideoInfo) -> str:
         """
         save the video
         """
         print("Saving transcript.....")
         
         video_id =  str(uuid4())
-        metadata = video.model_dump()
-        contents = metadata["contents"]
-        metadata.pop("contents")
-        
-        # save in file
-        os.makedirs("./transcripts", exist_ok=True)
-        with open(f"./transcripts/{video_id}.txt","w") as f:
-            f.write(contents)
-            
-        os.makedirs("./metadata", exist_ok=True)
-        with open(f"./metadata/{video_id}.json","w",encoding="utf-8") as f:
-            json.dump(metadata, f, indent=2, ensure_ascii=False)
+        self.cache.save_video(video_id,video)
         return video_id
     
     
@@ -142,8 +144,8 @@ class Tools:
 
         res = chain.invoke({"content":combined_summary})
         
-        os.makedirs("./results",exist_ok=True)
-        with open(f"./results/{video_id}.txt","w") as f:
+        os.makedirs(self._results_path,exist_ok=True)
+        with open(f"{self._results_path}/{video_id}.txt","w") as f:
             f.write(res.content)
         print("Notes saved!")
 
