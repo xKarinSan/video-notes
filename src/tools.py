@@ -27,6 +27,11 @@ from langchain_core.prompts import PromptTemplate
 from uuid import uuid4
 from typing import Any
 from .utils.cache import Cache
+from pydub import AudioSegment
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+import subprocess
+
 
 class Tools:
     @time_counter
@@ -119,17 +124,10 @@ class Tools:
             if not audio_path:
                 print("Error: No audio file found in temporary directory")
                 return None
+    
             
-            # 3) return the text
-            # to do: implement chunking + concurrent/parallel processing
- 
-            with open(audio_path, "rb") as audio_file:
-                transcript = self.client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file
-                )
-
-            contents = transcript.text
+            chunk_paths = self._chunk_audio_ffmpeg(audio_path)
+            contents = self._transcribe_chunks(chunk_paths)
             video_contents = VideoInfo(
                 url=url,
                 name=title,
@@ -142,7 +140,49 @@ class Tools:
             # except Exception as e:
             #     print(f"Error processing video: {e}")
             #     return None
-            
+    
+
+    @time_counter
+    def _chunk_audio_ffmpeg(self, audio_path, chunk_length_sec=60):
+        temp_dir = tempfile.mkdtemp()
+        output_pattern = os.path.join(temp_dir, "chunk_%03d.m4a")
+
+        subprocess.run([
+            self.ffmpeg_path,
+            "-hide_banner",
+            "-loglevel", "error",
+            "-i", audio_path,
+            "-f", "segment",
+            "-segment_time", str(chunk_length_sec),
+            "-c", "copy",
+            output_pattern
+        ], check=True)
+
+        return sorted(Path(temp_dir).glob("chunk_*.m4a"))
+
+    def _transcribe_chunks(self, chunk_paths):
+        results = [None] * len(chunk_paths)
+
+        def transcribe_file(path, index):
+            with open(path, "rb") as f:
+                transcript = self.client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=f
+                )
+            return index, transcript.text
+
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(transcribe_file, path, i)
+                for i, path in enumerate(chunk_paths)
+            ]
+
+            for future in futures:
+                index, text = future.result()
+                results[index] = text
+
+        return "\n".join(results)
+
     @time_counter
     def _save_docs(self,video:VideoInfo) -> str:
         """
