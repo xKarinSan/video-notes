@@ -27,7 +27,6 @@ from langchain_core.prompts import PromptTemplate
 from uuid import uuid4
 from typing import Any
 from .utils.cache import Cache
-from pydub import AudioSegment
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 import subprocess
@@ -107,39 +106,48 @@ class Tools:
                 
             }
 
-            # try:
-            extracted_time = datetime.now()
-            # 2) extract the audio
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                title = info.get("title", "Unknown Title")
+            try:
+                extracted_time = datetime.now()
+                # 2) extract the audio
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    title = info.get("title", "Unknown Title")
 
-            audio_path = None
-            for ext in ['.m4a', '.mp3']:
-                files = [f for f in os.listdir(tmp_dir) if f.endswith(ext)]
-                if files:
-                    audio_path = os.path.join(tmp_dir, files[0])
-                    break
-            
-            if not audio_path:
-                print("Error: No audio file found in temporary directory")
+                audio_path = None
+                for ext in ['.m4a', '.mp3']:
+                    files = [f for f in os.listdir(tmp_dir) if f.endswith(ext)]
+                    if files:
+                        audio_path = os.path.join(tmp_dir, files[0])
+                        break
+                
+                if not audio_path:
+                    print("Error: No audio file found in temporary directory")
+                    return None
+                
+                compressed_path = audio_path.replace(".m4a", "_compressed.m4a")
+
+                subprocess.run([
+                    "ffmpeg", "-y", "-i", audio_path,
+                    "-filter:a", "atempo=1.5",
+                    "-b:a", "64k", 
+                    "-vn", compressed_path
+                ], check=True)
+        
+                
+                chunk_paths = self._chunk_audio_ffmpeg(compressed_path)
+                contents = self._transcribe_chunks(chunk_paths)
+                video_contents = VideoInfo(
+                    url=url,
+                    name=title,
+                    contents=contents,
+                    date_extracted=extracted_time.timestamp() * 1000
+                )
+                
+                return video_contents
+
+            except Exception as e:
+                print(f"Error processing video: {e}")
                 return None
-    
-            
-            chunk_paths = self._chunk_audio_ffmpeg(audio_path)
-            contents = self._transcribe_chunks(chunk_paths)
-            video_contents = VideoInfo(
-                url=url,
-                name=title,
-                contents=contents,
-                date_extracted=extracted_time.timestamp() * 1000
-            )
-            
-            return video_contents
-
-            # except Exception as e:
-            #     print(f"Error processing video: {e}")
-            #     return None
     
 
     @time_counter
