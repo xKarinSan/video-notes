@@ -2,8 +2,11 @@
 __pycache__
 chroma
 
-transcripts
-metadata
-results
-summaries
-cache.db
+user_data
+
+# transcripts_text
+# transcripts_json
+# metadata
+# results
+# summaries
+# cache.db
