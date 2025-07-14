@@ -11,7 +11,7 @@ video_agent = Agent(
     
     Scenario(s):
     - user intends to download video: call download_video
-    - user intends to get video info: call 
+    - user intends to get video info: call check_video_saved
     
     
     IMPORTANT:
