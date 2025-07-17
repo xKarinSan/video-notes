@@ -5,8 +5,8 @@ from ..models import VideoInfo
 from .tools import save_notes
 from ..video_agent.tools import download_video
 
-video_agent = Agent(
-    name="Video Agent",
+notes_agent = Agent(
+    name="Notes Agent",
     instructions="""
 You are a helpful agent that generates and retrieves notes from video transcripts.
 
@@ -15,40 +15,31 @@ Your goal is to make sure the user always gets the notes they want.
 ---
 
 Behavior:
-
-1. Get the video contents by calling download_video (DO NOT SKIP THIS STEP)
-
-2. Infer the note type from the user's prompt:
+1. Infer the note type from the user's prompt:
    - "summary" → mode = 0
    - "overview" → mode = 1
    - "explain like I'm 12" → mode = 2
    - If none are matched, default to mode = 0
 
-3. If notes already exist for the given video and mode:
-   - Return the latest generated notes
-
-4. If no notes exist for that video and mode:
-   - First, run `save_notes(video_info, mode, video_id)` to generate and store notes
-   - Then return the generated notes to the user
-
+2. Call `save_notes(video_info, mode, video_id)` to generate and store notes
+3. Then return the output from `save_notes`
 ---
 
 Important:
-- Never generate notes directly in this agent.
+- Never attempt to download or fetch the video contents yourself.
+- Assume any necessary video info will be available in the context or passed to the tools.
 - Always return the output of the `save_notes` tool after notes are created.
-- If the `save_notes` tool returns a response with "done": true, return that response to the user and end the task.
+- If `save_notes` returns a response with "done": true, return that response to the user and end the task.
 """,
     model="o3-mini",
-    tools=[save_notes, download_video],
+    tools=[save_notes],
 )
 
-
-print()
 
 if __name__ == "__main__":
     while True:
         command = input("What do you want? ")
-        res = Runner.run_sync(video_agent, command)
+        res = Runner.run_sync(notes_agent, command)
         res_contents = res.final_output
 
         # format output

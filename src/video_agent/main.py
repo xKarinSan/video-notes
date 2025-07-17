@@ -10,20 +10,17 @@ video_agent = Agent(
     - search a video based on URL
     
     Scenario(s):
-    - user intends to download video: call download_video
-    - user intends to get video info: call check_video_saved
-    
-    
+    - user intends to download video information: call download_video
+
     IMPORTANT:
     - if the intent is vague, return an error message
     - if the user attempts to upload a video that already exists, return the metadata of the existing video
     - if the user attempts to search for a video that does not exist, return an error message
+    - if no transcript is unable to be obtained, return 'Video not found'
     """,
     model="o3-mini",
-    tools=[download_video, check_video_saved],
+    tools=[download_video],
 )
-
-print()
 
 if __name__ == "__main__":
     while True:
@@ -40,6 +37,8 @@ if __name__ == "__main__":
             print(f"Could not process video, please try again later")
         else:
             print(res_contents)
-        continue_running = input("Continue?(Y to continue, anything else to stop) ").lower() == "y"
+        continue_running = (
+            input("Continue?(Y to continue, anything else to stop) ").lower() == "y"
+        )
         if not continue_running:
             break
