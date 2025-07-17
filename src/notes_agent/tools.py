@@ -58,7 +58,6 @@ def save_notes(video: VideoInfo, mode: int, video_id: str) -> dict:
 
         with open(res_notes, "w") as f:
             f.write(res.content)
-        print("Notes saved!")
         return {
             "status": "success",
             "done": True,

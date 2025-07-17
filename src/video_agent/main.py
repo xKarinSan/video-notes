@@ -12,8 +12,7 @@ video_agent = Agent(
     Scenario(s):
     - user intends to download video: call download_video
     - user intends to get video info: call check_video_saved
-    
-    
+
     IMPORTANT:
     - if the intent is vague, return an error message
     - if the user attempts to upload a video that already exists, return the metadata of the existing video
@@ -22,8 +21,6 @@ video_agent = Agent(
     model="o3-mini",
     tools=[download_video, check_video_saved],
 )
-
-print()
 
 if __name__ == "__main__":
     while True:
