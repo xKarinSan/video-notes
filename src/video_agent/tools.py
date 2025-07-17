@@ -23,10 +23,8 @@ def download_video(url: str) -> Tuple[VideoInfo, str]:
     6. Return the metadata
     """
     try:
-        print("Video agent cooking")
         [video_info, video_id] = cache.get_video_metadata(url)
         if video_info and video_id:
-            print("Video found!")
             return [video_info, video_id]
 
         # check if valid URL (handled by YT client)
@@ -48,7 +46,6 @@ def download_video(url: str) -> Tuple[VideoInfo, str]:
         )
         video_id = str(uuid4())
         cache.save_video(video_id, video_info, json_transcript)
-        print("Video saved!")
         return {
             "status": "success",
             "done": True,
@@ -57,7 +54,6 @@ def download_video(url: str) -> Tuple[VideoInfo, str]:
         }
         
     except Exception as e:
-        print("Failed to save!")
         print(e)
         return {
             "status": "fail",
