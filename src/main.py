@@ -1,4 +1,5 @@
 from agents import Agent, Runner, SQLiteSession
+import tiktoken
 from src.notes_agent.main import notes_agent
 from src.video_agent.main import video_agent
 import os
@@ -10,8 +11,8 @@ You are the central controller. Your job is to decide whether to delegate a task
 
 You do NOT have access to any tools yourself.
 
-❌ You MUST NOT call any tool directly (e.g., download_video, summarise_all_chunks).
-✅ You may ONLY delegate to one of the two agents: `video_agent` or `notes_agent`.
+You MUST NOT call any tool directly (e.g., download_video, summarise_all_chunks).
+You may ONLY delegate to one of the two agents: `video_agent` or `notes_agent`.
 
 You must follow the rules in the handoff_description exactly and never improvise, guess, or act on your own.
 """,
@@ -47,34 +48,23 @@ Handoff rules:
 )
 
 
-def is_save_only(command: str) -> bool:
-    command = command.lower()
-    return any(
-        x in command
-        for x in [
-            "save the video",
-            "save this video",
-            "keep a record",
-            "record this video",
-            "store this video",
-            "keep this video",
-        ]
-    ) and not any(x in command for x in ["notes", "summary", "overview", "explain"])
-
-
 if __name__ == "__main__":
+    instructions = main_agent.instructions
+    handoff_description = main_agent.handoff_description
     os.makedirs("./user_data/session", exist_ok=True)
     session = SQLiteSession("userSession", "./user_data/session/chat.db")
-    print("Heres the main agent")
     while True:
         command = input("User: ")
+        full_prompt = f"{instructions}\n{handoff_description}\nUser: {command}"
+
         if not command:
             break
         print("Agent: Cooking in progress ...")
-        # if is_save_only(command):
-        #     res = Runner.run_sync(video_agent, command, session=session)
-        # else:
-        #     res = Runner.run_sync(main_agent, command, session=session)
+        
+        encoding = tiktoken.encoding_for_model("gpt-4")
+        tokens = encoding.encode(full_prompt)
+        token_count = len(tokens)
+        print(f"Current token count: {token_count}")
         res = Runner.run_sync(main_agent, command, session=session)
         res_contents = res.final_output
         print("Agent: ", res_contents)
