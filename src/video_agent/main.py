@@ -1,25 +1,35 @@
-from agents import Agent, Runner
+from agents import Agent, Runner, handoff
 from .tools import download_video, check_video_saved
 from ..models import VideoInfo
+from ..notes_agent.main import notes_agent
 
 video_agent = Agent(
     name="Video Agent",
     instructions="""
-    You are a helpful video agent. Based on the user's URL and intent, decide whether to:
-    - download video
-    - search a video based on URL
-    
-    Scenario(s):
-    - user intends to download video information: call download_video
+You are the video_agent. Your job is to extract metadata from a YouTube video URL.
 
-    IMPORTANT:
-    - if the intent is vague, return an error message
-    - if the user attempts to upload a video that already exists, return the metadata of the existing video
-    - if the user attempts to search for a video that does not exist, return an error message
-    - if no transcript is unable to be obtained, return 'Video not found'
-    """,
+✔️ Always:
+- Use `download_video` to fetch metadata
+- Return:
+  {
+    "video_info": <VideoInfo>,
+    "video_id": "<uuid>"
+  }
+
+🔁 If the original user request (passed from main agent) includes any of:
+  "summarize", "summary", "notes", "overview", "explain"
+→ Then you MUST hand off to `notes_agent`, passing the metadata as input.
+
+🚫 Never:
+- Generate summaries or notes
+- Say anything to the user
+- Skip the handoff if summarization is requested
+
+Return an error if the input URL is invalid or download fails.
+""",
     model="o3-mini",
     tools=[download_video],
+    handoffs=[handoff(notes_agent)],
 )
 
 if __name__ == "__main__":

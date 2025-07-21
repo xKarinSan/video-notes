@@ -1,4 +1,4 @@
-from agents import Agent, Runner, SQLiteSession
+from agents import Agent, Runner, SQLiteSession, handoff
 import tiktoken
 from src.notes_agent.main import notes_agent
 from src.video_agent.main import video_agent
@@ -7,64 +7,80 @@ import os
 main_agent = Agent(
     name="Main agent",
     instructions="""
-You are the central controller. Your job is to decide whether to delegate a task to the `video_agent` or the `notes_agent`.
+You are the main routing agent. You NEVER perform tasks directly.
 
-You do NOT have access to any tools yourself.
+✔️ You MUST:
+- Always delegate video-related requests to `video_agent`
+- NEVER summarize, explain, or process the video yourself
 
-You MUST NOT call any tool directly (e.g., download_video, summarise_all_chunks).
-You may ONLY delegate to one of the two agents: `video_agent` or `notes_agent`.
-
-You must follow the rules in the handoff_description exactly and never improvise, guess, or act on your own.
+🚫 Do NOT call `notes_agent` yourself.
+Let `video_agent` handle follow-up routing if needed.
 """,
     model="gpt-4",
-    handoffs=[video_agent, notes_agent],
+    handoffs=[handoff(video_agent)],
     handoff_description="""
-Follow these strict rules:
+🚨 ABSOLUTE RULE:
+You are never allowed to generate notes, summaries, or explanations.
+Only `notes_agent` is permitted to do that.
 
-1. If input includes phrases like:
-   - "save this video", "store this video", "record this video", "keep a record", etc.
-   AND does NOT mention:
+🔁 DELEGATION RULES:
+
+1️⃣ If input includes phrases like:
+   - "save this video", "store this video", "record this video", "keep a record"
+   AND does NOT include:
    - "notes", "summary", "overview", "explain"
-→ Call `video_agent` only. Do NOT call `notes_agent`.
+→ ✅ Call `video_agent` only  
+→ ❌ DO NOT call `notes_agent`  
+→ ❌ DO NOT summarize or explain anything
 
-2. If input includes any of:
+2️⃣ If input includes any of:
    - "notes", "summary", "overview", "explain"
-→ First call `video_agent`, extract `video_info` and `video_id`. Then call `notes_agent` with those values.
+→ ✅ First call `video_agent`  
+→ ✅ Extract `video_info` and `video_id` from response  
+→ ✅ Then call `notes_agent` with:
+   {
+     "video_info": <value>,
+     "video_id": <value>
+   }
 
-3. If unclear or missing video URL → Ask for clarification.
+→ ❌ NEVER summarize anything yourself  
+→ ❌ NEVER skip calling `notes_agent` for summaries
 
-Examples:
-- "Save this video" → ✅ `video_agent`
-- "Give me a summary" → ✅ `video_agent` → `notes_agent`
-- "Just store the video" → ✅ `video_agent`
-- "Explain this video" → ✅ `video_agent` → `notes_agent`
+3️⃣ If the input is unclear or missing a video URL:
+→ Ask the user to clarify.
 
-Handoff rules:
-- Only one agent per step.
-- Only call `notes_agent` if both `video_info` and `video_id` are available.
-- Always return final output to the user.
-- Never assume, guess, or infer — follow input words exactly.
-    """,
+✅ EXAMPLES:
+
+- "Save this video" → `video_agent` only  
+- "Explain this video" → `video_agent`, then `notes_agent`  
+- "Summarize this" → `video_agent`, then `notes_agent`  
+- "I want a summary" → Ask for URL first  
+
+⚠️ Handoff rules:
+- One agent per step
+- Only call `notes_agent` after `video_agent`
+- Always return only the final agent's output
+- Never guess or act on your own
+
+""",
 )
 
 
 if __name__ == "__main__":
-    instructions = main_agent.instructions
-    handoff_description = main_agent.handoff_description
     os.makedirs("./user_data/session", exist_ok=True)
     session = SQLiteSession("userSession", "./user_data/session/chat.db")
     while True:
-        command = input("User: ")
-        full_prompt = f"{instructions}\n{handoff_description}\nUser: {command}"
-
+        command = input("User: ")        
         if not command:
             break
-        print("Agent: Cooking in progress ...")
         
-        encoding = tiktoken.encoding_for_model("gpt-4")
-        tokens = encoding.encode(full_prompt)
-        token_count = len(tokens)
-        print(f"Current token count: {token_count}")
-        res = Runner.run_sync(main_agent, command, session=session)
-        res_contents = res.final_output
-        print("Agent: ", res_contents)
+        current_agent = main_agent
+        current_input = command
+
+        while True:
+            print("Main Agent: Cooking in progress ...")
+            res = Runner.run_sync(current_agent, current_input)
+            output = res.final_output
+            # Final step, print and break
+            print("Agent:", output)
+            break

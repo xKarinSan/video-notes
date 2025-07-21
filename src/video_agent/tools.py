@@ -27,7 +27,11 @@ def download_video(url: str) -> Tuple[VideoInfo, str]:
         [video_info, video_id] = cache.get_video_metadata(url)
         if video_info and video_id:
             print("Video found!")
-            return [video_info, video_id]
+            # return [video_info, video_id]
+            return {
+                "video_info": video_info,
+                "video_id": video_id,
+            }
 
         # check if valid URL (handled by YT client)
         extracted_video_contents = youtube_client.extract_video_data(url)
@@ -50,8 +54,6 @@ def download_video(url: str) -> Tuple[VideoInfo, str]:
         cache.save_video(video_id, video_info, json_transcript)
         print("Video saved!")
         return {
-            "status": "success",
-            "done": True,
             "video_info": video_info,
             "video_id": video_id,
         }
@@ -60,9 +62,8 @@ def download_video(url: str) -> Tuple[VideoInfo, str]:
         print("Failed to save!")
         print(e)
         return {
-            "status": "fail",
-            "done": True,
-            "message": e,
+            "video_info": None,
+            "video_id": None,
         }
 
 
