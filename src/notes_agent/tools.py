@@ -53,8 +53,8 @@ def save_notes(video: VideoInfo, mode: int, video_id: str) -> dict:
         res = chain.invoke({"content": video_summary})
 
         notes_id = str(uuid4())
-        os.makedirs(RESULTS_PATH, exist_ok=True)
-        res_notes = f"{RESULTS_PATH}/{notes_id}.txt"
+        os.makedirs(f"{RESULTS_PATH}/{video_id}/", exist_ok=True)
+        res_notes = f"{RESULTS_PATH}/{video_id}/{notes_id}.txt"
 
         with open(res_notes, "w") as f:
             f.write(res.content)

@@ -11,6 +11,15 @@ class VideoInfo(BaseModel):
     date_extracted: float
     contents: str
     
+    # the URL for the thumbnail
+    thumbnail: str
+    
+    # when video is uploaded on yt
+    date_uploaded: float
+    
+    # name of channel poster
+    op_name: str
+    
 # for the cache
 class VideoMetaData(BaseModel):
     url: str

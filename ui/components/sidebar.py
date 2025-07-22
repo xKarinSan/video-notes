@@ -7,26 +7,25 @@ from .cards import card
 def sidebar():
 
     # part 1: video themselves
+    name_to_id = {}
     item_bar = st.sidebar
-    item_bar.header("Video notes")
     videoList = []
 
-    for root, dirs, files in os.walk("./user_data/metadata"):
+    for root, _, files in os.walk("./user_data/metadata"):
         for file in files:
             filename = os.path.join(root, file)
-            print(file.strip(".json"))
+            video_id = file.strip(".json")
             with open(filename) as f:
                 d = json.load(f)
                 videoList.append(d["name"])
+                name_to_id[d["name"]] = video_id
 
     videoList_display = ["-- Select a video --"] + videoList
     if "selected_video" not in st.session_state:
-
         st.session_state.selected_video = "-- Select a video --"
 
-    if st.button("Reset", type="primary"):
+    if item_bar.button("Reset", type="primary"):
         st.session_state.selected_video = "-- Select a video --"
-        st.experimental_rerun()
 
     selected_video = item_bar.radio(
         "Choose a saved video",
@@ -37,5 +36,4 @@ def sidebar():
     if selected_video != "-- Select a video --":
         item_bar.write(f"Selected: {selected_video}")
 
-
-    # part 2: the notes
+    return name_to_id.get(selected_video, "")

@@ -34,6 +34,9 @@ class Cache:
             name=metadata.name,
             description=metadata.description,
             contents=transcript,
+            thumbnail=metadata.thumbnail,
+            date_uploaded=metadata.date_uploaded,
+            op_name=metadata.op_name,
         )
 
         return [video_info, video_id]

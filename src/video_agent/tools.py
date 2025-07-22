@@ -37,9 +37,10 @@ def download_video(url: str) -> Tuple[VideoInfo, str]:
         extracted_video_contents = youtube_client.extract_video_data(url)
         if not extracted_video_contents:
             return None
-        
+
         # video downloaded and all
         metadata = extracted_video_contents["metadata"]
+        print("metadata",metadata)
         json_transcript = extracted_video_contents["json_transcript"]
         text_transcript = extracted_video_contents["text_transcript"]
 
@@ -49,6 +50,9 @@ def download_video(url: str) -> Tuple[VideoInfo, str]:
             description=metadata.description,
             date_extracted=metadata.date_extracted,
             contents=text_transcript,
+            thumbnail=metadata.thumbnail,
+            date_uploaded=metadata.date_uploaded,
+            op_name=metadata.op_name,
         )
         video_id = str(uuid4())
         cache.save_video(video_id, video_info, json_transcript)
@@ -57,7 +61,7 @@ def download_video(url: str) -> Tuple[VideoInfo, str]:
             "video_info": video_info,
             "video_id": video_id,
         }
-        
+
     except Exception as e:
         print("Failed to save!")
         print(e)

@@ -54,11 +54,16 @@ class YoutubeClient:
             if "items" not in response:
                 return None
             response_contents = response["items"]
+            date_uploaded_dt = datetime.strptime(response_contents[0]["snippet"]["publishedAt"], "%Y-%m-%dT%H:%M:%SZ")
+            date_uploaded_timestamp = int(date_uploaded_dt.timestamp()) * 1000
             video_metadata = VideoMetaData(
                 url=url,
                 name=response_contents[0]["snippet"]["localized"]["title"],
                 description=response_contents[0]["snippet"]["localized"]["description"],
                 date_extracted=query_date.timestamp() * 1000,
+                thumbnail=response_contents[0]["snippet"]["thumbnails"]["maxres"]["url"],
+                date_uploaded=date_uploaded_timestamp,
+                op_name=response_contents[0]["snippet"]["channelTitle"]
             )
 
             raw_video_transcript = self.transcript_client.fetch(video_id)
