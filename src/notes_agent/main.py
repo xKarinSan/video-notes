@@ -3,7 +3,6 @@ from agents import Agent, Runner
 # from .tools import download_video, check_video_saved
 from ..models import VideoInfo
 from .tools import save_notes
-from ..video_agent.tools import download_video
 
 notes_agent = Agent(
     name="Notes Agent",

@@ -17,3 +17,12 @@ class VideoMetaData(BaseModel):
     name: str
     description: str
     date_extracted: float
+    
+    # the URL for the thumbnail
+    thumbnail: str
+    
+    # when video is uploaded on yt
+    date_uploaded: float
+    
+    # name of channel poster
+    op_name: str
