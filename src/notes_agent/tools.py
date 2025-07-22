@@ -6,7 +6,6 @@ Tools:
  - read
 
 - retrieve summary based on video URL -> takes metadata
-
 """
 
 from ..models import VideoInfo
@@ -15,12 +14,14 @@ from ..utils.cache import cache
 from ..utils.chunking import split_chunks
 from ..utils.summary import summarise_all_chunks, combine_summaries
 from ..utils.client import langchain_client
-from ..utils.const import RESULTS_PATH
+from ..utils.const import RESULTS_PATH, RESULTS_METADATA_OATH
 from agents import function_tool
 from langchain_core.prompts import PromptTemplate
 from uuid import uuid4
+from datetime import datetime
 
 import os
+import json
 
 
 @function_tool
@@ -53,11 +54,23 @@ def save_notes(video: VideoInfo, mode: int, video_id: str) -> dict:
         res = chain.invoke({"content": video_summary})
 
         notes_id = str(uuid4())
+        generated_date = datetime.now()
         os.makedirs(f"{RESULTS_PATH}/{video_id}/", exist_ok=True)
         res_notes = f"{RESULTS_PATH}/{video_id}/{notes_id}.txt"
 
         with open(res_notes, "w") as f:
             f.write(res.content)
+
+        os.makedirs(f"{RESULTS_METADATA_OATH}/{video_id}/", exist_ok=True)
+        with open(
+            f"{RESULTS_METADATA_OATH}/{video_id}/{notes_id}.json", "w", encoding="utf-8"
+        ) as f:
+            notes_metadata = {
+                "extracted_date": int(generated_date.timestamp()) * 1000,
+                "category": mode,
+            }
+            json.dump(notes_metadata, f, indent=2, ensure_ascii=False)
+
         return {
             "status": "success",
             "done": True,
