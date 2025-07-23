@@ -118,3 +118,4 @@ with chat_col:
 
         st.session_state.messages.append({"role": "agent", "content": output})
         messages_container.chat_message("agent").write(output)
+        st.rerun()
