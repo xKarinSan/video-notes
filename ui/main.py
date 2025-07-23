@@ -18,6 +18,7 @@ from datetime import datetime
 
 from agents import Agent, Runner, SQLiteSession, handoff
 from src.main import main_agent
+from src.video_agent.main import video_agent
 
 
 st.set_page_config(layout="wide")
@@ -88,13 +89,12 @@ with chat_col:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    
     messages_container = st.container(height=500)
     for msg in st.session_state.messages:
         messages_container.chat_message(msg["role"]).write(msg["content"])
-        
+
     os.makedirs("./user_data/session", exist_ok=True)
-    session = SQLiteSession("userSession", "./user_data/session/chat.db")
+    # session = SQLiteSession("userSession", "./user_data/session/chat.db")
 
     if prompt := st.chat_input("Say something"):
 
@@ -106,10 +106,15 @@ with chat_col:
             {"role": "agent", "content": "Cooking in progress ..."}
         )
 
-        # Async-safe call for agent
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         res = loop.run_until_complete(Runner.run(main_agent, prompt))
-        st.session_state.messages.append({"role": "agent", "content": res.final_output})
-        messages_container.chat_message("agent").write(res.final_output)
+        output = (
+            res.final_output
+            if res.last_agent.name != video_agent.name
+            else "The video has been saved successfully."
+        )
+
+        st.session_state.messages.append({"role": "agent", "content": output})
+        messages_container.chat_message("agent").write(output)

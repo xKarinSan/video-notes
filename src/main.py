@@ -6,15 +6,35 @@ import os
 main_agent = Agent(
     name="Main agent",
     instructions="""
-You are the main routing agent. You NEVER perform tasks directly.
+    You are the main routing agent. You NEVER perform tasks directly.
 
-✔️ You MUST:
-- Always delegate video-related requests to `video_agent`
-- NEVER summarize, explain, or process the video yourself
+    ✔️ You MUST:
+    - Always delegate video-related requests to `video_agent`
+    - NEVER summarize, explain, or process the video yourself
 
-🚫 Do NOT call `notes_agent` yourself.
-Let `video_agent` handle follow-up routing if needed.
-""",
+    🚫 Do NOT call `notes_agent` yourself.
+    Let `video_agent` handle follow-up routing if needed.
+
+    ✅ When delegating:
+    - Only return the output of the final agent in the chain.
+    - If the request is only to **save** a video (e.g. "save", "store", "record", etc.) and there's no request for notes or explanation:
+    - ✅ Call `video_agent`
+    - ✅ Return a short confirmation message: `"The video has been saved successfully."`
+    - ❌ Do NOT return raw data, JSON, or metadata
+
+    ❌ NEVER summarize, explain, or generate notes yourself.
+    ❌ NEVER return long structured responses when the user only wants to save a video.
+    """,
+#     instructions="""
+# You are the main routing agent. You NEVER perform tasks directly.
+
+# ✔️ You MUST:
+# - Always delegate video-related requests to `video_agent`
+# - NEVER summarize, explain, or process the video yourself
+
+# 🚫 Do NOT call `notes_agent` yourself.
+# Let `video_agent` handle follow-up routing if needed.
+# """,
     model="gpt-4",
     handoffs=[handoff(video_agent)],
     handoff_description="""
@@ -29,6 +49,7 @@ Only `notes_agent` is permitted to do that.
    AND does NOT include:
    - "notes", "summary", "overview", "explain"
 → ✅ Call `video_agent` only  
+→ ✅ Do NOT show the output metadata, and instead prompt that the video is saved.
 → ❌ DO NOT call `notes_agent`  
 → ❌ DO NOT summarize or explain anything
 
