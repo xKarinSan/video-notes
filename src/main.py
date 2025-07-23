@@ -1,6 +1,5 @@
 from agents import Agent, Runner, SQLiteSession, handoff
 import tiktoken
-from src.notes_agent.main import notes_agent
 from src.video_agent.main import video_agent
 import os
 
@@ -74,12 +73,12 @@ if __name__ == "__main__":
         if not command:
             break
         
-        current_agent = main_agent
-        current_input = command
+        # current_agent = main_agent
+        # current_input = command
 
         while True:
             print("Main Agent: Cooking in progress ...")
-            res = Runner.run_sync(current_agent, current_input)
+            res = Runner.run_sync(main_agent, command)
             output = res.final_output
             # Final step, print and break
             print("Agent:", output)
