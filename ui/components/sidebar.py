@@ -17,8 +17,10 @@ def sidebar():
             video_id = file.strip(".json")
             with open(filename) as f:
                 d = json.load(f)
-                videoList.append(d["name"])
+                videoList.append((d["name"],d["date_extracted"]))
                 name_to_id[d["name"]] = video_id
+        
+    videoList = [video[0] for video in sorted(videoList, key=lambda x: x[1], reverse=True)]
 
     videoList_display = ["-- Select a video --"] + videoList
     if "selected_video" not in st.session_state:

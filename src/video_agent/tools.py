@@ -1,7 +1,6 @@
 from agents import function_tool
 from ..utils.cache import cache
 from uuid import uuid4
-from ..models import VideoInfo, DownloadVideoResult
 from ..utils.youtube_client import youtube_client
 from typing import Tuple
 
