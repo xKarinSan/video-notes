@@ -1,13 +1,13 @@
 from agents import function_tool
 from ..utils.cache import cache
 from uuid import uuid4
-from ..models import VideoInfo
+from ..models import VideoInfo, DownloadVideoResult
 from ..utils.youtube_client import youtube_client
 from typing import Tuple
 
 
 @function_tool
-def download_video(url: str) -> Tuple[VideoInfo, str]:
+def download_video(url: str) -> dict:
     """
     Takes in the youtube URL and download the video's metadata into the user's device
     """

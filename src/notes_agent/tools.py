@@ -9,7 +9,7 @@ Tools:
 """
 
 from ..models import VideoInfo
-from ..prompts import prompt_templates, summarise_chunk_prompt, combine_sumamries_prompt
+from ..prompts import prompt_templates
 from ..utils.cache import cache
 from ..utils.chunking import split_chunks
 from ..utils.summary import summarise_all_chunks, combine_summaries
@@ -34,12 +34,6 @@ def save_notes(video: VideoInfo, mode: int, video_id: str) -> dict:
         if not mode:
             mode = 0
         contents = video.contents
-
-        # video_summary = cache.get_video_summary(video_id)
-        # print("video_summary", video_summary)
-
-        # check if there is a summary in the cache
-        # if not video_summary:
 
         # split further
         chunks = split_chunks(contents)
@@ -70,15 +64,10 @@ def save_notes(video: VideoInfo, mode: int, video_id: str) -> dict:
                 "category": mode,
             }
             json.dump(notes_metadata, f, indent=2, ensure_ascii=False)
+        print({"notes_type": mode, "notes_path": res_notes})
 
-        return {
-            "status": "success",
-            "done": True,
-            "file_path": res_notes,
-            "note_id": notes_id,
-            "summary_snippet": res.content[:300],
-        }
+        return {"video_name": video.name, "notes_type": mode, "notes_path": res_notes}
 
     except Exception as e:
         print("e", e)
-        return {"status": "fail", "done": True, "message": e}
+        return {"video_name": None, "notes_type": None, "notes_path": None}

@@ -1,8 +1,36 @@
 from agents import Agent, Runner, handoff
 from .tools import download_video, check_video_saved
-from ..models import VideoInfo
+from ..models import VideoInfo, VideoStatus, DownloadVideoResult
 from ..notes_agent.main import notes_agent
 
+# video_agent = Agent(
+#     name="Video Agent",
+#     instructions="""
+# You are the video_agent. Your job is to extract metadata from a YouTube video URL.
+
+# ✔️ Always:
+# - Use `download_video` to fetch metadata
+# - Return:
+#   {
+#     "video_info": <VideoInfo>,
+#     "video_id": "<uuid>"
+#   }
+
+# 🔁 If the original user request (passed from main agent) includes any of:
+#   "summarize", "summary", "notes", "overview", "explain"
+# → Then you MUST hand off to `notes_agent`, passing the metadata as input.
+
+# 🚫 Never:
+# - Generate summaries or notes
+# - Say anything to the user
+# - Skip the handoff if summarization is requested
+
+# Return an error if the input URL is invalid or download fails.
+# """,
+#     model="o3-mini",
+#     tools=[download_video],
+#     handoffs=[handoff(notes_agent)],
+# )
 video_agent = Agent(
     name="Video Agent",
     instructions="""
@@ -10,19 +38,21 @@ You are the video_agent. Your job is to extract metadata from a YouTube video UR
 
 ✔️ Always:
 - Use `download_video` to fetch metadata
-- Return:
-  {
-    "video_info": <VideoInfo>,
-    "video_id": "<uuid>"
-  }
+- If the user requests summarization (see below), hand off to `notes_agent`
+- If no summarization is requested, return a success message with the video info path
 
-🔁 If the original user request (passed from main agent) includes any of:
+📝 Summarization Trigger:
+If the original user request includes any of:
   "summarize", "summary", "notes", "overview", "explain"
 → Then you MUST hand off to `notes_agent`, passing the metadata as input.
 
+📂 If no summarization is requested:
+- Return a success message with the video info path in this format:
+  "Success! Video information saved. Path: {video_info_path}"
+
 🚫 Never:
-- Generate summaries or notes
-- Say anything to the user
+- Generate summaries or notes yourself
+- Say anything to the user directly
 - Skip the handoff if summarization is requested
 
 Return an error if the input URL is invalid or download fails.
@@ -31,7 +61,6 @@ Return an error if the input URL is invalid or download fails.
     tools=[download_video],
     handoffs=[handoff(notes_agent)],
 )
-
 if __name__ == "__main__":
     while True:
         command = input("What do you want? ")

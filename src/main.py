@@ -24,16 +24,6 @@ main_agent = Agent(
     ❌ NEVER summarize, explain, or generate notes yourself.
     ❌ NEVER return long structured responses when the user only wants to save a video.
     """,
-#     instructions="""
-# You are the main routing agent. You NEVER perform tasks directly.
-
-# ✔️ You MUST:
-# - Always delegate video-related requests to `video_agent`
-# - NEVER summarize, explain, or process the video yourself
-
-# 🚫 Do NOT call `notes_agent` yourself.
-# Let `video_agent` handle follow-up routing if needed.
-# """,
     model="gpt-4",
     handoffs=[handoff(video_agent)],
     handoff_description="""
@@ -93,9 +83,6 @@ if __name__ == "__main__":
         if not command:
             break
         
-        # current_agent = main_agent
-        # current_input = command
-
         while True:
             print("Main Agent: Cooking in progress ...")
             res = Runner.run_sync(main_agent, command)

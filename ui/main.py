@@ -1,7 +1,7 @@
 import os
 import sys
 import asyncio
-
+import time
 
 # Get the absolute path to the project root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -31,6 +31,7 @@ notes_col, chat_col = st.columns([3, 2.5], gap="medium")
 existing_notes = []
 
 with notes_col:
+    st.header("Current Video")
     # retrieve the metadata from the container
     video_metadata = None
     if selected_video_id != "":
@@ -97,6 +98,7 @@ with chat_col:
     # session = SQLiteSession("userSession", "./user_data/session/chat.db")
 
     if prompt := st.chat_input("Say something"):
+        start_time = time.time()
 
         messages_container.chat_message("user").write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -118,4 +120,6 @@ with chat_col:
 
         st.session_state.messages.append({"role": "agent", "content": output})
         messages_container.chat_message("agent").write(output)
+        end_time = time.time()
+        print(f"{end_time-start_time:.4f}")
         st.rerun()
