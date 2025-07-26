@@ -17,7 +17,7 @@ import json
 from const import NOTES_CATEGORIES
 from components.cards import card
 from components.sidebar import sidebar
-from agents import Agent, Runner, SQLiteSession, handoff
+from agents import Agent, Runner, SQLiteSession, handoff, StreamEvent
 from src.main import main_agent
 from src.video_agent.main import video_agent
 
@@ -33,21 +33,25 @@ def load_json(path):
     with open(path, "r") as f:
         return json.load(f)
 
+
 def render_video_metadata(video_id):
     metadata_path = f"./user_data/metadata/{video_id}.json"
     if not os.path.exists(metadata_path):
         return None
 
     metadata = load_json(metadata_path)
-    uploaded_date = datetime.fromtimestamp(metadata["date_uploaded"] / 1000).strftime("%d-%m-%Y, %H:%M:%S")
-    
+    uploaded_date = datetime.fromtimestamp(metadata["date_uploaded"] / 1000).strftime(
+        "%d-%m-%Y, %H:%M:%S"
+    )
+
     with notes_col.expander(metadata["name"], expanded=False):
         st.image(metadata["thumbnail"])
         st.text(f"OP: {metadata['op_name']}")
         st.text(f"Uploaded on: {uploaded_date}")
         st.link_button("Original Video", metadata["url"])
-    
+
     return metadata
+
 
 def render_existing_notes(video_id):
     notes_root = f"./user_data/results_metadata/{video_id}"
@@ -62,7 +66,9 @@ def render_existing_notes(video_id):
 
             with notes_col.container(border=True):
                 st.subheader(notes_id)
-                st.text(f"Generated on: {datetime.now().strftime('%d-%m-%Y, %H:%M:%S')}")
+                st.text(
+                    f"Generated on: {datetime.now().strftime('%d-%m-%Y, %H:%M:%S')}"
+                )
                 st.badge(NOTES_CATEGORIES[note_metadata["category"]])
                 with st.expander("View Notes", expanded=False):
                     notes_txt_path = f"./user_data/results/{video_id}/{notes_id}.txt"
@@ -70,12 +76,46 @@ def render_existing_notes(video_id):
                         with open(notes_txt_path, "r") as f:
                             st.write(f.read())
 
-async def process_with_agent_system(prompt):
-    try:
-        return
-    
-    except Exception as e:
-        return
+
+async def process_with_agent_system(prompt, chat_container):
+    # response = ""
+    # current_agent = main_agent.name
+    # handoff_occurred = False
+    res = Runner.run_streamed(main_agent, prompt)
+    async for event in res.stream_events():
+        if event.type == "agent_updated_stream_event":
+            handoff_occurred = True
+            current_agent = event.new_agent.name
+            st.session_state.messages.append(
+                {
+                    "role": "system",
+                    "content": f"🔄 Handoff to **{current_agent}**",
+                    "agent": current_agent,
+                    "handoff": True,
+                }
+            )
+            chat_container.chat_message("system").write(
+                f"🔄 Handoff to **{current_agent}**"
+            )
+
+        elif event.type == "message_output_item":
+            response += event.message.content
+            st.session_state.messages.append(
+                {
+                    "role": "agent",
+                    "content": response,
+                    "agent": current_agent,
+                    "handoff": handoff_occurred,
+                }
+            )
+            chat_container.chat_message("agent").write(response)
+    output = (
+        res.final_output
+        if res.last_agent.name != video_agent.name
+        else "The video has been saved successfully."
+    )
+    st.session_state.messages.append({"role": "agent", "content": output})
+
 
 def render_chat():
     if "messages" not in st.session_state:
@@ -84,10 +124,13 @@ def render_chat():
     messages_container = st.container(height=500)
 
     for msg in st.session_state.messages:
+        if msg.get("handoff"):
+            messages_container.markdown(
+                f"🔄 **Handoff:** Routed to **{msg['agent']}** for specialized assistance"
+            )
         messages_container.chat_message(msg["role"]).write(msg["content"])
 
     if prompt := st.chat_input("Say something"):
-        start_time = time.time()
 
         messages_container.chat_message("user").write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -99,20 +142,10 @@ def render_chat():
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-
-        result = loop.run_until_complete(Runner.run(main_agent, prompt))
+        loop.run_until_complete(process_with_agent_system(prompt, messages_container))
         loop.close()
-
-        output = (
-            result.final_output
-            if result.last_agent.name != video_agent.name
-            else "The video has been saved successfully."
-        )
-
-        st.session_state.messages.append({"role": "agent", "content": output})
-        messages_container.chat_message("agent").write(output)
-        print(f"{time.time() - start_time:.4f}")
         st.rerun()
+
 
 with notes_col:
     st.header("Current chat")
