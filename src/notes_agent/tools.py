@@ -25,7 +25,7 @@ import json
 
 
 @function_tool
-def save_notes(video: VideoInfo, mode: int, video_id: str) -> dict:
+def save_notes(mode: int, url: str) -> dict:
     """
     generate notes based on the prompts; user chooses the mode and then trigger the prompt template
     """
@@ -33,8 +33,10 @@ def save_notes(video: VideoInfo, mode: int, video_id: str) -> dict:
         print("Saving notes ...")
         if not mode:
             mode = 0
+        [video, video_id] = cache.get_video_metadata(url)
+        if not video:
+            return {"video_name": None, "notes_type": None, "notes_path": None}
         contents = video.contents
-
         # split further
         chunks = split_chunks(contents)
         summaries = summarise_all_chunks(chunks)

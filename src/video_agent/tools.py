@@ -7,9 +7,9 @@ from ..models import VideoInfo
 
 
 @function_tool
-def download_video(url: str) -> dict:
+def download_video(url: str) -> str:
     """
-    Takes in the youtube URL and download the video's metadata into the user's device
+    Takes in the youtube URL and download the video's metadata into the user's device and return the video id
     """
 
     """
@@ -20,7 +20,7 @@ def download_video(url: str) -> dict:
     3. use the youtube API to download the video
     4. Extract the transcript WITH timestamps and metadata
     5. Save the youtube data (metadata and timestamps)
-    6. Return the metadata
+    6. Return the video id
     """
     try:
         print("Video agent cooking")
@@ -28,10 +28,7 @@ def download_video(url: str) -> dict:
         if video_info and video_id:
             print("Video found!")
             # return [video_info, video_id]
-            return {
-                "video_info": video_info,
-                "video_id": video_id,
-            }
+            return video_id
 
         # check if valid URL (handled by YT client)
         extracted_video_contents = youtube_client.extract_video_data(url)
@@ -57,19 +54,12 @@ def download_video(url: str) -> dict:
         video_id = str(uuid4())
         cache.save_video(video_id, video_info, json_transcript)
         print("Video saved!")
-        return {
-            "video_info": video_info,
-            "video_id": video_id,
-        }
+        return video_id
 
     except Exception as e:
         print("Failed to save!")
         print(e)
-        return {
-            "video_info": None,
-            "video_id": None,
-        }
-
+        return None
 
 @function_tool
 def check_video_saved(url: str) -> bool:

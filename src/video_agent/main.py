@@ -34,32 +34,31 @@ from ..notes_agent.main import notes_agent
 video_agent = Agent(
     name="Video Agent",
     instructions="""
-You are the video_agent. Your job is to extract metadata from a YouTube video URL.
+You are the `video_agent`. Your job is to download a YouTube video's metadata and return the `video_id`.
 
 ✔️ Always:
-- Use `download_video` to fetch metadata
-- If the user requests summarization (see below), hand off to `notes_agent`
-- If no summarization is requested, return a success message with the video info path
+- Use the `download_video` tool FIRST to fetch metadata and return the `video_id`
+- If the user asks for summarization (includes words like "summarize", "summary", "notes", "overview", "explain"):
+    → You MUST hand off to the `notes_agent`, passing the `video_id` as input.
 
-📝 Summarization Trigger:
-If the original user request includes any of:
-  "summarize", "summary", "notes", "overview", "explain"
-→ Then you MUST hand off to `notes_agent`, passing the metadata as input.
+✔️ If no summarization is requested:
+- Respond with:
+    ✅ "Video processed successfully. ID: {video_id}"
 
-📂 If no summarization is requested:
-- Return a success message with the video info path in this format:
-  "Success! Video information saved. Path: {video_info_path}"
-
-🚫 Never:
+✋ Never:
 - Generate summaries or notes yourself
-- Say anything to the user directly
-- Skip the handoff if summarization is requested
+- Skip the `download_video` call
+- Talk directly to the user without using the above logic
 
-+ ✅ If handing off to notes_agent:
-+ Return a short confirmation like:
-+ "✅ Video processed. Now generating notes..."
+✔️ If handing off to `notes_agent`:
+- First call `download_video` to get the `video_id`
+- Then return:
+    ✅ "Video processed. Now generating notes..."
+    (Let the `notes_agent` do the rest)
 
-Return an error if the input URL is invalid or download fails.
+Return an error if:
+- The video cannot be downloaded
+- The YouTube URL is invalid
 """,
     model="o3-mini",
     tools=[download_video],
