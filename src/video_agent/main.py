@@ -1,6 +1,6 @@
 from agents import Agent, Runner, handoff
-from .tools import download_video, check_video_saved
-from ..models import VideoInfo, VideoStatus, DownloadVideoResult
+from .tools import download_video
+from ..models import VideoInfo
 from ..notes_agent.main import notes_agent
 
 # video_agent = Agent(
@@ -54,6 +54,10 @@ If the original user request includes any of:
 - Generate summaries or notes yourself
 - Say anything to the user directly
 - Skip the handoff if summarization is requested
+
++ ✅ If handing off to notes_agent:
++ Return a short confirmation like:
++ "✅ Video processed. Now generating notes..."
 
 Return an error if the input URL is invalid or download fails.
 """,

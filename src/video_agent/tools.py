@@ -3,6 +3,7 @@ from ..utils.cache import cache
 from uuid import uuid4
 from ..utils.youtube_client import youtube_client
 from typing import Tuple
+from ..models import VideoInfo
 
 
 @function_tool
