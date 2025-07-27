@@ -45,10 +45,11 @@ def render_video_metadata(video_id):
     )
 
     with notes_col.expander(metadata["name"], expanded=False):
-        st.image(metadata["thumbnail"])
+        st.video(metadata["url"])
+        # st.image(metadata["thumbnail"])
         st.text(f"OP: {metadata['op_name']}")
         st.text(f"Uploaded on: {uploaded_date}")
-        st.link_button("Original Video", metadata["url"])
+        # st.link_button("Original Video", metadata["url"])
 
     return metadata
 
@@ -78,25 +79,42 @@ def render_existing_notes(video_id):
 
 
 async def process_with_agent_system(prompt, chat_container):
-    # response = ""
-    # current_agent = main_agent.name
-    # handoff_occurred = False
     res = Runner.run_streamed(main_agent, prompt)
+    last_tool_name = ""
     async for event in res.stream_events():
         if event.type == "agent_updated_stream_event":
-            handoff_occurred = True
             current_agent = event.new_agent.name
+            
+            handoff_msg = f"Handoff to **{current_agent}**"
             st.session_state.messages.append(
                 {
-                    "role": "system",
-                    "content": f"🔄 Handoff to **{current_agent}**",
-                    "agent": current_agent,
-                    "handoff": True,
+                    "role": "agent",
+                    "content": handoff_msg,
                 }
             )
-            chat_container.chat_message("system").write(
-                f"🔄 Handoff to **{current_agent}**"
-            )
+            chat_container.chat_message("agent").write(handoff_msg)
+            
+        elif event.type == "run_item_stream_event":
+            if event.item.type == "tool_call_item":
+                last_tool_name = event.item.raw_item.name
+                tool_start_msg = f"Tool {last_tool_name} is starting"
+                st.session_state.messages.append(
+                    {
+                        "role": "agent",
+                        "content": tool_start_msg,
+                    }
+                )
+                chat_container.chat_message("agent").write(tool_start_msg)    
+                
+            elif event.item.type == "tool_call_output_item":
+                tool_finish_msg = f"Tool {last_tool_name} is done"
+                st.session_state.messages.append(
+                    {
+                        "role": "agent",
+                        "content": tool_finish_msg,
+                    }
+                )
+                chat_container.chat_message("agent").write(tool_finish_msg)   
 
         elif event.type == "message_output_item":
             response += event.message.content
@@ -104,8 +122,6 @@ async def process_with_agent_system(prompt, chat_container):
                 {
                     "role": "agent",
                     "content": response,
-                    "agent": current_agent,
-                    "handoff": handoff_occurred,
                 }
             )
             chat_container.chat_message("agent").write(response)
@@ -148,7 +164,7 @@ def render_chat():
 
 
 with notes_col:
-    st.header("Current chat")
+    st.header("Current video")
     if selected_video_id:
         metadata = render_video_metadata(selected_video_id)
         render_existing_notes(selected_video_id)

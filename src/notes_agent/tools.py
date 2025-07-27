@@ -27,7 +27,24 @@ import json
 @function_tool
 def save_notes(mode: int, url: str) -> dict:
     """
-    generate notes based on the prompts; user chooses the mode and then trigger the prompt template
+    Generate and save notes for a previously downloaded YouTube video.
+
+    Use this tool when:
+    - You are given a YouTube video URL that has already been processed by the video agent.
+    - You need to create structured notes or a summary in a specific format (based on the selected mode).
+
+    Inputs:
+    - mode (int): The note style or template index to use (e.g., overview, bullet points, technical summary).
+    - url (str): The original YouTube video URL (must already exist in the local video cache).
+
+    Output (dict):
+    - video_name: The name of the YouTube video
+    - notes_type: The template mode that was used
+    - notes_path: The path to the generated notes file
+
+    Notes:
+    - If the video is not found in the cache, or an error occurs, all fields in the result will be null.
+    - The tool automatically summarizes the transcript, applies the selected format, and saves the notes.
     """
     try:
         print("Saving notes ...")
