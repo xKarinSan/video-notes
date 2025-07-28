@@ -1,8 +1,6 @@
 import streamlit as st
 import os
 import json
-from .cards import card
-
 
 def sidebar():
 

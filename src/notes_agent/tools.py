@@ -7,8 +7,6 @@ Tools:
 
 - retrieve summary based on video URL -> takes metadata
 """
-
-from ..models import VideoInfo
 from ..prompts import prompt_templates
 from ..utils.cache import cache
 from ..utils.chunking import split_chunks

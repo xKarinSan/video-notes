@@ -37,7 +37,6 @@ def download_video(url: str) -> str:
 
         # video downloaded and all
         metadata = extracted_video_contents["metadata"]
-        print("metadata",metadata)
         json_transcript = extracted_video_contents["json_transcript"]
         text_transcript = extracted_video_contents["text_transcript"]
 
@@ -50,10 +49,10 @@ def download_video(url: str) -> str:
             thumbnail=metadata.thumbnail,
             date_uploaded=metadata.date_uploaded,
             op_name=metadata.op_name,
+            duration=metadata.duration,
         )
         video_id = str(uuid4())
         cache.save_video(video_id, video_info, json_transcript)
-        print("Video saved!")
         return video_id
 
     except Exception as e:

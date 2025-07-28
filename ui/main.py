@@ -17,9 +17,8 @@ from uuid import uuid4
 
 # Project imports
 from const import NOTES_CATEGORIES
-from components.cards import card
 from components.sidebar import sidebar
-from agents import Agent, Runner, SQLiteSession, handoff, StreamEvent
+from agents import Agent, Runner, SQLiteSession, handoff
 from src.main import main_agent
 from src.video_agent.main import video_agent
 
@@ -36,9 +35,13 @@ def load_json(path):
     with open(path, "r") as f:
         return json.load(f)
 
+def format_seconds_to_hms(seconds):
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 def render_video_metadata(video_id):
-    # nonlocal current_timestamp_secs
     metadata_path = f"./user_data/metadata/{video_id}.json"
     if not os.path.exists(metadata_path):
         return None
@@ -50,11 +53,22 @@ def render_video_metadata(video_id):
     if "current_second" not in st.session_state:
         st.session_state.current_second = 0
 
+
     with notes_col.expander(metadata["name"], expanded=False):
+
+        
         options = {"events": _SUPPORTED_EVENTS, "progress_interval": 1000}
+    
         player = st_player(metadata["url"], **options)
+    
         if player and player.data:
             st.session_state.current_second = math.floor(player.data["playedSeconds"])
+    
+        curr_time = st.slider("Video time (s): ", 0, metadata["duration"], st.session_state.current_second)
+        st.session_state.current_second = curr_time
+
+        hms_time = format_seconds_to_hms(st.session_state.current_second)
+        st.text(f"Current video time: {hms_time}")
 
         name_col, upload_date_col = st.columns([1, 1], gap="medium")
         name_col.text(f"OP: {metadata['op_name']}")
@@ -66,10 +80,12 @@ def render_video_metadata(video_id):
             notes_id = str(uuid4())
             with open(f"{timestamp_notes_root}/{notes_id}.txt", "w") as f:
                 f.write(current_timestamp_notes)
+                
         render_existing_timestamp_notes(video_id,st.session_state.current_second)
 
 
 def render_existing_timestamp_notes(video_id, timestamp):
+    # display the notes per timestamp contents
     rounded_timestamp = math.floor(timestamp)
     timestamp_notes_root = f"./user_data/timestamp_notes/{video_id}/{rounded_timestamp}_s"
     if not os.path.exists(timestamp_notes_root):
@@ -87,7 +103,6 @@ def render_existing_timestamp_notes(video_id, timestamp):
 def render_existing_notes(video_id):
     notes_root = f"./user_data/results_metadata/{video_id}"
     if not os.path.exists(notes_root):
-        print("nope")
         return
 
     for root, _, files in os.walk(notes_root):
@@ -161,6 +176,7 @@ async def process_with_agent_system(prompt, chat_container):
         if res.last_agent.name != video_agent.name
         else "The video has been saved successfully."
     )
+    # output = res.final_output
     st.session_state.messages.append({"role": "agent", "content": output})
 
 
@@ -197,7 +213,6 @@ def render_chat():
 with notes_col:
     st.header("Current video")
     if selected_video_id:
-        # [metadata, current_timestamp] = render_video_metadata(selected_video_id)
         render_video_metadata(selected_video_id)
         render_existing_notes(selected_video_id)
 
@@ -205,4 +220,3 @@ with chat_col:
     st.header("Agent chat")
     os.makedirs("./user_data/session", exist_ok=True)
     render_chat()
-    print(st.session_state)

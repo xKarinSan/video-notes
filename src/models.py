@@ -20,6 +20,9 @@ class VideoInfo(BaseModel):
     # name of channel poster
     op_name: str
     
+    # duration in seconds
+    duration: int
+    
 # for the cache
 class VideoMetaData(BaseModel):
     url: str
@@ -35,3 +38,6 @@ class VideoMetaData(BaseModel):
     
     # name of channel poster
     op_name: str
+    
+    # duration in seconds
+    duration: int
