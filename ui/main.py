@@ -35,11 +35,13 @@ def load_json(path):
     with open(path, "r") as f:
         return json.load(f)
 
+
 def format_seconds_to_hms(seconds):
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
 
 def render_video_metadata(video_id):
     metadata_path = f"./user_data/metadata/{video_id}.json"
@@ -50,55 +52,91 @@ def render_video_metadata(video_id):
     uploaded_date = datetime.fromtimestamp(metadata["date_uploaded"] / 1000).strftime(
         "%d-%m-%Y, %H:%M:%S"
     )
-    if "current_second" not in st.session_state:
-        st.session_state.current_second = 0
 
+    defaults = {
+        "current_second": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0,
+        "editing_time_manually": False,
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
     with notes_col.expander(metadata["name"], expanded=False):
-
-        
         options = {"events": _SUPPORTED_EVENTS, "progress_interval": 1000}
-    
         player = st_player(metadata["url"], **options)
-    
-        if player and player.data:
-            st.session_state.current_second = math.floor(player.data["playedSeconds"])
-    
-        curr_time = st.slider("Video time (s): ", 0, metadata["duration"], st.session_state.current_second)
-        st.session_state.current_second = curr_time
+
+        # Update current time from video only if not editing manually
+        if player and player.data and not st.session_state.editing_time_manually:
+            new_time = math.floor(player.data["playedSeconds"])
+            if new_time != st.session_state.current_second:
+                st.session_state.current_second = new_time
+                st.session_state.hours = new_time // 3600
+                rem = new_time % 3600
+                st.session_state.minutes = rem // 60
+                st.session_state.seconds = rem % 60
+
+        hour_col, min_col, sec_col = st.columns([1, 1, 1], gap="medium")
+        with hour_col:
+            input_hours = st.number_input(
+                "Hours", min_value=0, value=st.session_state.hours, key="input_hours"
+            )
+        with min_col:
+            input_minutes = st.number_input(
+                "Minutes", min_value=0, max_value=59, value=st.session_state.minutes, key="input_minutes"
+            )
+        with sec_col:
+            input_seconds = st.number_input(
+                "Seconds", min_value=0, max_value=59, value=st.session_state.seconds, key="input_seconds"
+            )
+
+        total_seconds = input_seconds + 60 * input_minutes + 3600 * input_hours
+        if total_seconds != st.session_state.current_second and total_seconds <= metadata["duration"]:
+            st.session_state.editing_time_manually = True
+            st.session_state.current_second = total_seconds
+            st.session_state.hours = input_hours
+            st.session_state.minutes = input_minutes
+            st.session_state.seconds = input_seconds
+        else:
+            st.session_state.editing_time_manually = False
 
         hms_time = format_seconds_to_hms(st.session_state.current_second)
         st.text(f"Current video time: {hms_time}")
 
         name_col, upload_date_col = st.columns([1, 1], gap="medium")
         name_col.text(f"OP: {metadata['op_name']}")
+        upload_date_col.text(f"Uploaded on: {uploaded_date}")
 
-        upload_date_col.text(f"Uploaded on: {uploaded_date}")        
         if current_timestamp_notes := st.chat_input("Your notes here (current timestamp):"):
             timestamp_notes_root = f"./user_data/timestamp_notes/{video_id}/{st.session_state.current_second}_s"
             os.makedirs(timestamp_notes_root, exist_ok=True)
             notes_id = str(uuid4())
             with open(f"{timestamp_notes_root}/{notes_id}.txt", "w") as f:
                 f.write(current_timestamp_notes)
-                
-        render_existing_timestamp_notes(video_id,st.session_state.current_second)
 
+        render_existing_timestamp_notes(video_id, st.session_state.current_second)
 
 def render_existing_timestamp_notes(video_id, timestamp):
     # display the notes per timestamp contents
     rounded_timestamp = math.floor(timestamp)
-    timestamp_notes_root = f"./user_data/timestamp_notes/{video_id}/{rounded_timestamp}_s"
+    timestamp_notes_root = (
+        f"./user_data/timestamp_notes/{video_id}/{rounded_timestamp}_s"
+    )
     if not os.path.exists(timestamp_notes_root):
         return
     for _, _, files in os.walk(timestamp_notes_root):
         for file in files:
             timestamp_notes_id = file.replace(".txt", "")
-            with st.container(border = True):
-                timestamp_notes_txt_path = f"{timestamp_notes_root}/{timestamp_notes_id}.txt"
+            with st.container(border=True):
+                timestamp_notes_txt_path = (
+                    f"{timestamp_notes_root}/{timestamp_notes_id}.txt"
+                )
                 if os.path.exists(timestamp_notes_txt_path):
                     with open(timestamp_notes_txt_path, "r") as f:
                         st.write(f.read())
-            
+
 
 def render_existing_notes(video_id):
     notes_root = f"./user_data/results_metadata/{video_id}"
