@@ -52,6 +52,9 @@ def download_video(url: str) -> str:
             duration=metadata.duration,
         )
         video_id = str(uuid4())
+        file_downloaded = youtube_client.download_video_file(video_info.url, video_id)
+        if not file_downloaded:
+            return None
         cache.save_video(video_id, video_info, json_transcript)
         return video_id
 
@@ -59,6 +62,7 @@ def download_video(url: str) -> str:
         print("Failed to save!")
         print(e)
         return None
+
 
 @function_tool
 def check_video_saved(url: str) -> bool:
