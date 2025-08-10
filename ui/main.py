@@ -63,10 +63,17 @@ def render_video_metadata(video_id):
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+    
+    video_path = f"./user_data/videos/{video_id}.mp4"
+    video_file = open(video_path, "rb")  # Replace "my_video.mp4" with your file path
+    video_bytes = video_file.read()
+    # st.video(video_bytes)
+
 
     with notes_col.expander(metadata["name"], expanded=False):
         options = {"events": _SUPPORTED_EVENTS, "progress_interval": 1000}
         player = st_player(metadata["url"], **options)
+        st.video(video_bytes)
 
         # Update current time from video only if not editing manually
         if player and player.data and not st.session_state.editing_time_manually:
