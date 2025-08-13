@@ -1,12 +1,42 @@
 import { createRoot } from "react-dom/client";
-// document.body.innerHTML = '<div id="app"></div>'
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-// const root = createRoot(document.getElementById('app'));
-// root.render(<h1>Hello world</h1>);
-const App = () => {
-    return <h1> Hello from React =) </h1>;
-};
+import Layout from "./Layout";
+import Homepage from "./pages/Homepage";
+
+import MainNotesPage from "./pages/MainNotesPage";
+import CurrentNotesPage from "./pages/CurrentNotesPage";
+import MainVideoPage from "./pages/MainVideoPage";
+import CurrentVideoPage from "./pages/CurrentVideoPage";
+
+const router = createBrowserRouter([
+    {
+        element: <Layout />,
+        children: [
+            {
+                path: "/",
+                element: <Homepage />,
+            },
+            {
+                path: "/videos",
+                element: <MainVideoPage />,
+            },
+            {
+                path: "/videos/:videoId",
+                element: <CurrentVideoPage />,
+            },
+            {
+                path: "/notes",
+                element: <MainNotesPage />,
+            },
+            {
+                path: "/notes/:notesId",
+                element: <CurrentNotesPage />,
+            },
+        ],
+    },
+]);
 
 const container = document.getElementById("root");
 const root = createRoot(container);
-root.render(<App />);
+root.render(<RouterProvider router={router} />);
