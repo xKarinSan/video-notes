@@ -3,11 +3,12 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import Layout from "./Layout";
 import Homepage from "./pages/Homepage";
-
 import MainNotesPage from "./pages/MainNotesPage";
 import CurrentNotesPage from "./pages/CurrentNotesPage";
 import MainVideoPage from "./pages/MainVideoPage";
 import CurrentVideoPage from "./pages/CurrentVideoPage";
+
+import "./index.css";
 
 const router = createBrowserRouter([
     {
