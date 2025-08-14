@@ -27,6 +27,9 @@
     "@electron-forge/plugin-fuses": "^7.8.3",
     "@electron-forge/plugin-vite": "^7.8.3",
     "@electron/fuses": "^1.8.0",
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
     "autoprefixer": "^10.4.21",
     "daisyui": "^5.0.50",
     "electron": "37.2.6",
@@ -41,6 +44,7 @@
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-router-dom": "^7.8.0"
+    "react-router-dom": "^7.8.0",
+    "tailwindcss-typography": "^3.1.0"
   }
 }

@@ -4,17 +4,17 @@ function AddNewVideo() {
     }
     return (
         <div>
-            <div class="card bg-base-300 w-96 shadow-sm m-auto ">
-                <div class="card-body">
-                    <h2 class="card-title">Add New Video</h2>
+            <div className="card bg-base-300 w-96 shadow-sm m-auto ">
+                <div className="card-body">
+                    <h2 className="card-title">Add New Video</h2>
                     <p>
                         <input
                             type="text"
                             placeholder="Type here"
-                            class="input"
+                            className="input"
                         />
                         <button
-                            class="btn btn-base-content m-auto"
+                            className="btn btn-base-content m-auto"
                             onClick={() => addVideo()}
                         >
                             Add Video
