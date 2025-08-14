@@ -44,33 +44,20 @@ function MainVideoPage() {
                 {videos.map((video: Video) => {
                     const { name, id, thumbnail, duration } = video;
                     return (
-                        <div className="card bg-base-300 w-full max-w-1/4 shadow-s m-5">
-                            <Link to={`/videos/${id}`} key={id}>
+                        <Link to={`/videos/${id}`} key={id}>
+                            <div className="card bg-base-300 w-full max-w-1/4 shadow-s m-5">
                                 <figure>
                                     <img src={thumbnail} alt="thumbnail" />
                                 </figure>
                                 <div className="card-body">
-                                    <h2 className="card-title line-clamp-3">
-                                        {name}
-                                    </h2>
+                                    <h2 className="card-title line-clamp-3">{name}</h2>
                                     <p>{formatDuration(duration)}</p>
                                 </div>
-                            </Link>
-                        </div>
+                            </div>
+                        </Link>
                     );
                 })}
             </div>
-            {/* <ul>
-                <li>
-                    <Link to="/videos/1">Video 1</Link>
-                </li>
-                <li>
-                    <Link to="/videos/2">Video 2</Link>
-                </li>
-                <li>
-                    <Link to="/videos/3">Video 3</Link>
-                </li>
-            </ul> */}
         </div>
     );
 }
