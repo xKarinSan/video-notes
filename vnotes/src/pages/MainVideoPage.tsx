@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
+import AddNewVideo from "../components/AddNewVideo";
 function MainVideoPage() {
     return (
         <div>
             <h1>Main Video Page</h1>
+            <AddNewVideo/>
             <ul>
                 <li>
                     <Link to="/videos/1">Video 1</Link>
