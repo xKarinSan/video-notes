@@ -4,7 +4,7 @@ function AddNewVideo() {
     }
     return (
         <div>
-            <div class="card bg-base-100 w-96 shadow-sm m-auto">
+            <div class="card bg-base-300 w-96 shadow-sm m-auto ">
                 <div class="card-body">
                     <h2 class="card-title">Add New Video</h2>
                     <p>
@@ -14,7 +14,7 @@ function AddNewVideo() {
                             class="input"
                         />
                         <button
-                            class="btn btn-primary m-auto"
+                            class="btn btn-base-content m-auto"
                             onClick={() => addVideo()}
                         >
                             Add Video
