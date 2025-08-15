@@ -1,5 +1,10 @@
+import { useState } from "react";
+
 function AddNewVideo() {
+    const [videoUrl, setVideoURL] = useState("");
     function addVideo() {
+        console.log(videoUrl);
+        window.api.getVideodata(videoUrl);
         alert("Video added!");
     }
     return (
@@ -12,6 +17,8 @@ function AddNewVideo() {
                             type="text"
                             placeholder="Type here"
                             className="input"
+                            onChange={(e) => setVideoURL(e.target.value)}
+                            value={videoUrl}
                         />
                         <button
                             className="btn btn-base-content m-auto"
