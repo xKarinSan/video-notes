@@ -20,3 +20,5 @@ interface TranscriptMessage {
     start: number;
     duration: number;
 }
+
+export { Video, Transcript, TranscriptMessage };
