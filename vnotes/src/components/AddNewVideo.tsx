@@ -2,10 +2,24 @@ import { useState } from "react";
 
 function AddNewVideo() {
     const [videoUrl, setVideoURL] = useState("");
-    function addVideo() {
-        console.log(videoUrl);
-        window.api.getVideodata(videoUrl);
-        alert("Video added!");
+    const [isUploading, setIsUploading] = useState(false);
+    async function addVideo() {
+        setIsUploading(true);
+        await window.api
+            .getVideodata(videoUrl)
+            .then((res) => {
+                if (res) {
+                    setIsUploading(false);
+                    alert("Video added!");
+                    return;
+                }
+                setIsUploading(false);
+                alert("Video failed to add");
+            })
+            .catch((e) => {
+                setIsUploading(false);
+                alert("Video failed to add");
+            });
     }
     return (
         <div>
@@ -21,10 +35,11 @@ function AddNewVideo() {
                             value={videoUrl}
                         />
                         <button
-                            className="btn btn-base-content m-auto w-full"
+                            className={"btn btn-base-content m-auto w-full"}
                             onClick={() => addVideo()}
+                            disabled={isUploading}
                         >
-                            Add Video
+                            {isUploading ? "Adding..." : "Add Video"}
                         </button>
                     </p>
                 </div>

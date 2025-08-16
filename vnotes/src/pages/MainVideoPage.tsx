@@ -26,7 +26,6 @@ function MainVideoPage() {
         (async () => {
             try {
                 const vids = await window.api.listMetadata();
-                console.log("res", vids);
                 setVideos(vids);
             } catch (e) {
                 console.error(e);
