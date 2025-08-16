@@ -16,12 +16,12 @@ function AddNewVideo() {
                         <input
                             type="text"
                             placeholder="Type here"
-                            className="input"
+                            className="input w-full"
                             onChange={(e) => setVideoURL(e.target.value)}
                             value={videoUrl}
                         />
                         <button
-                            className="btn btn-base-content m-auto"
+                            className="btn btn-base-content m-auto w-full"
                             onClick={() => addVideo()}
                         >
                             Add Video

@@ -38,23 +38,25 @@ function MainVideoPage() {
 
     return (
         <div>
-            <h1 className="text-3xl m-5 text-center">Video Library</h1>
+            <h1 className="text-3xl m-5 text-center ">Video Library</h1>
             <AddNewVideo />
-            <div>
+            <div className="m-auto p-5 grid grid-cols-4 gap-4">
                 {videos.map((video: Video) => {
                     const { name, id, thumbnail, duration } = video;
                     return (
-                        <Link to={`/videos/${id}`} key={id}>
-                            <div className="card bg-base-300 w-full max-w-1/4 shadow-s m-5">
+                        <div className="card bg-base-300 w-full">
+                            <Link to={`/videos/${id}`} key={id}>
                                 <figure>
                                     <img src={thumbnail} alt="thumbnail" />
                                 </figure>
                                 <div className="card-body">
-                                    <h2 className="card-title line-clamp-3">{name}</h2>
+                                    <h2 className="card-title line-clamp-3">
+                                        {name}
+                                    </h2>
                                     <p>{formatDuration(duration)}</p>
                                 </div>
-                            </div>
-                        </Link>
+                            </Link>
+                        </div>
                     );
                 })}
             </div>
