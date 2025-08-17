@@ -2,8 +2,7 @@ import AddNewVideo from "../components/AddNewVideo";
 
 function Homepage() {
     return (
-        <div>
-            <h1>Homepage</h1>
+        <div className="p-5">
             <AddNewVideo />
         </div>
     );

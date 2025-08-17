@@ -2,10 +2,11 @@ import path from "node:path";
 import https from "node:https";
 import fsp from "node:fs/promises";
 import fs, { lstat } from "node:fs";
-import { NotesMetadata, VideoNotesMapping } from "../classes/Notes";
+import { NotesItem, NotesMetadata, VideoNotesMapping } from "../classes/Notes";
 import { NOTES_DIR, VIDEOS_NOTES_MAP_DIR } from "../../const";
 import { randomUUID } from "node:crypto";
 import { ensureDir } from "./files.utils";
+
 
 async function createNotesMetadata(videoId) {
     try {

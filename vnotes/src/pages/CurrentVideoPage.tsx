@@ -63,30 +63,34 @@ function CurrentVideoPage() {
                     {isLoading ? (
                         <span className="loading loading-spinner loading-lg mt-6"></span>
                     ) : (
-                        <video
-                            className="rounded-lg border border-base-300 mt-4"
-                            height="500"
-                            width="500"
-                            controls
-                        >
-                            <source
-                                src={currentVideoFilePath}
-                                type="video/mp4"
-                            />
-                        </video>
+                        <>
+                            <video
+                                className="rounded-lg border border-base-300 mt-4"
+                                height="500"
+                                width="500"
+                                controls
+                            >
+                                <source
+                                    src={currentVideoFilePath}
+                                    type="video/mp4"
+                                />
+                            </video>
+                            <button
+                                className={`btn btn-primary w-fit mt-4 ${
+                                    isCreating ? "btn-disabled loading" : ""
+                                }`}
+                                disabled={isCreating}
+                                onClick={createNewNotes}
+                            >
+                                {isCreating
+                                    ? "Creating..."
+                                    : "Create New Notes"}
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
-            <div>
-                <button
-                    disabled={isCreating}
-                    onClick={() => {
-                        createNewNotes();
-                    }}
-                >
-                    {isCreating ? "Creating..." : "Create New Notes"}
-                </button>
-            </div>
+            <div></div>
         </div>
     );
 }

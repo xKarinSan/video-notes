@@ -11,4 +11,11 @@ interface VideoNotesMapping {
     notesId: string;
 }
 
-export { NotesMetadata, VideoNotesMapping };
+interface NotesItem {
+    id: string;
+    isSnapshot: boolean; // true if snapshot, else return false
+    content: string; // either the URL of the snapshot or what the user typed
+    timestamp: number; // -1 if not timestamped if not exact timestamp
+}
+
+export { NotesMetadata, VideoNotesMapping, NotesItem };
