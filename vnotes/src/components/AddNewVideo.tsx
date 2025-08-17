@@ -35,7 +35,7 @@ function AddNewVideo() {
                             value={videoUrl}
                         />
                         <button
-                            className={"btn btn-base-content m-auto w-full"}
+                            className={"btn bg-blue-700 m-auto w-full mt-2"}
                             onClick={() => addVideo()}
                             disabled={isUploading}
                         >

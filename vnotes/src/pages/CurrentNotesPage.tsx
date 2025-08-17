@@ -4,6 +4,7 @@ import { Video } from "../classes/Video";
 import { NotesMetadata, NotesItem } from "../classes/Notes";
 import { jsPDF } from "jspdf";
 import { v4 as uuidv4 } from "uuid";
+import { useNavigate } from "react-router-dom";
 
 function CurrentNotesPage() {
     const { notesId } = useParams();
@@ -13,10 +14,11 @@ function CurrentNotesPage() {
         useState<string>("");
     const [currentNotesMetadata, setCurrentNotesMetadata] =
         useState<NotesMetadata>();
-
     const [currentNotes, setCurrentNotes] = useState<NotesItem[]>([]);
     const [currentNotesContent, setCurrentNotesContent] = useState<string>("");
+
     const videoRef = useRef();
+    const navigate = useNavigate();
 
     useEffect(() => {
         (async () => {
@@ -54,6 +56,10 @@ function CurrentNotesPage() {
             [...currentNotes, newNote].sort((a, b) => a.timestamp - b.timestamp)
         );
         setCurrentNotesContent("");
+    }
+
+    function deleteNoteContent(id) {
+        setCurrentNotes(currentNotes.filter((note) => note.id !== id));
     }
 
     async function captureSnapshot() {
@@ -101,7 +107,7 @@ function CurrentNotesPage() {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         let y = 20;
-        
+
         // title
         doc.setFontSize(16);
         doc.text(currentNotesMetadata.title, 10, y);
@@ -154,46 +160,91 @@ function CurrentNotesPage() {
         doc.save(`${docId}.pdf`);
     }
     return (
-        <div className="flex flex-col items-center justify-center p-6">
-            {/* <p>Current Notes ID: {notesId}</p> */}
-            <div className="grid">
-                <div className="card w-full max-w-2xl bg-base-200 shadow-xl">
-                    <div className="card-body items-center text-center">
-                        <h1 className="card-title text-2xl font-bold">
-                            {currentVideo?.name ?? "N/A"}
-                        </h1>
-                        {isLoading ? (
-                            <span className="loading loading-spinner loading-lg mt-6"></span>
-                        ) : (
-                            <video
-                                className="rounded-lg border border-base-300 mt-4"
-                                height="500"
-                                width="500"
-                                ref={videoRef}
-                                controls
-                            >
-                                <source
-                                    src={currentVideoFilePath}
-                                    type="video/mp4"
-                                />
-                            </video>
-                        )}
+        <div className="flex flex-col items-center justify-center">
+            <div className="flex justify-start m-2 w-full">
+                <button
+                    className="btn m-1 btn-sm w-fit"
+                    onClick={() => navigate("/notes")} // go back in history
+                >
+                    ← Back
+                </button>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 w-full">
+                {/* Left column */}
+                <div className="flex flex-col items-center">
+                    <div className="card w-full bg-base-500 shadow-xl">
+                        <div className="card-body items-center text-center">
+                            <h1 className="card-title text-2xl font-bold">
+                                {currentVideo?.name ?? "N/A"}
+                            </h1>
+                            {isLoading ? (
+                                <span className="loading loading-spinner loading-lg mt-6"></span>
+                            ) : (
+                                <video
+                                    className="rounded-lg border border-base-300 mt-4"
+                                    ref={videoRef}
+                                    controls
+                                >
+                                    <source
+                                        src={currentVideoFilePath}
+                                        type="video/mp4"
+                                    />
+                                </video>
+                            )}
+                        </div>
                     </div>
-                </div>
-                <div>
-                    <div className="flex">
+
+                    <div className="flex flex-wrap my-2">
                         <button
-                            className="btn btn-primary m-2 w-fit"
-                            onClick={() => {
-                                captureSnapshot();
-                            }}
+                            className="btn bg-blue-700 mr-1 w-fit text-white flex items-center gap-2"
+                            onClick={captureSnapshot}
                         >
+                            {/* Camera icon */}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M3 7.5h3l1.5-2h9l1.5 2h3a1.5 1.5 0 011.5 1.5v9a1.5 1.5 0 01-1.5 1.5H3a1.5 1.5 0 01-1.5-1.5v-9A1.5 1.5 0 013 7.5z"
+                                />
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z"
+                                />
+                            </svg>
                             Capture Snapshot
                         </button>
                         <button
-                            className="btn btn-secondary m-2 w-fit"
-                            onClick={() => exportToPdf()}
+                            className="btn bg-blue-700 ml-1 w-fit text-white flex items-center gap-2"
+                            onClick={exportToPdf}
                         >
+                            {/* Document file icon */}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M19.5 21H6.75A2.25 2.25 0 014.5 18.75V5.25A2.25 2.25 0 016.75 3h6.75l6 6v9.75A2.25 2.25 0 0119.5 21z"
+                                />
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M12 3v6h6"
+                                />
+                            </svg>
                             Export to PDF
                         </button>
                     </div>
@@ -202,39 +253,61 @@ function CurrentNotesPage() {
                         className="textarea textarea-bordered w-full mt-4"
                         placeholder="Type your note here..."
                         value={currentNotesContent}
-                        onChange={(e) => {
-                            setCurrentNotesContent(e.target.value);
-                        }}
+                        onChange={(e) => setCurrentNotesContent(e.target.value)}
                     ></textarea>
                     <button
-                        className="btn btn-secondary mt-2 w-full"
-                        onClick={() => addNoteContent()}
+                        className="btn bg-blue-700 mt-2 w-full"
+                        onClick={addNoteContent}
                     >
                         Add Note
                     </button>
+                </div>
 
-                    {currentNotes.map((note: NotesItem) => {
-                        const { timestamp, content, isSnapshot } = note;
-
+                <div className="overflow-y-auto max-h-[80vh]">
+                    {currentNotes.map((note: NotesItem, idx) => {
+                        const { timestamp, content, isSnapshot, id } = note;
                         return (
-                            <div>
-                                <div className="card bg-base-300 shadow-sm m-2">
-                                    <div className="card-body">
-                                        <p>
-                                            {isSnapshot === true ? (
-                                                <img
-                                                    src={content}
-                                                    alt={`Snapshot at ${timestamp}`}
-                                                    className="rounded-lg"
-                                                />
-                                            ) : (
-                                                content
-                                            )}
-                                        </p>
+                            <div
+                                key={idx}
+                                className="card bg-base-300 shadow-sm m-2"
+                            >
+                                <div className="card-body p-2">
+                                    <div className="flex">
                                         <p className="text-sm text-gray-500">
                                             Timestamp: {timestamp}
                                         </p>
+                                        <button
+                                            className="btn btn-black btn-xs btn-square"
+                                            onClick={() =>
+                                                deleteNoteContent(id)
+                                            }
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                strokeWidth={1.5}
+                                                stroke="currentColor"
+                                                className="w-4 h-4"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                />
+                                            </svg>
+                                        </button>
                                     </div>
+
+                                    {isSnapshot ? (
+                                        <img
+                                            src={content}
+                                            alt={`Snapshot at ${timestamp}`}
+                                            className="rounded-lg"
+                                        />
+                                    ) : (
+                                        <p className="my-2">{content}</p>
+                                    )}
                                 </div>
                             </div>
                         );

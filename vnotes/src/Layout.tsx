@@ -52,13 +52,74 @@ function Layout() {
                 ></label>
                 <ul className="menu bg-base-200 min-h-full w-50 p-4">
                     <li>
-                        <Link to="/">Home</Link>
+                        <Link to="/" className="flex items-center gap-2">
+                            {/* Home icon */}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M3 12l9-9 9 9M4.5 10.5v9.75A1.5 1.5 0 006 21h12a1.5 1.5 0 001.5-1.5v-9.75"
+                                />
+                            </svg>
+                            Home
+                        </Link>
                     </li>
                     <li>
-                        <Link to="/videos">Videos</Link>
+                        <Link to="/videos" className="flex items-center gap-2">
+                            {/* Video file icon */}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M19.5 21h-15A1.5 1.5 0 013 19.5v-15A1.5 1.5 0 014.5 3h9l6 6v10.5A1.5 1.5 0 0119.5 21z"
+                                />
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M9.75 9.75v4.5l3.75-2.25-3.75-2.25z"
+                                />
+                            </svg>
+                            Videos
+                        </Link>
                     </li>
                     <li>
-                        <Link to="/notes">Notes</Link>
+                        <Link to="/notes" className="flex items-center gap-2">
+                            {/* Written document icon */}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M19.5 21h-15A1.5 1.5 0 013 19.5v-15A1.5 1.5 0 014.5 3h9l6 6v10.5A1.5 1.5 0 0119.5 21z"
+                                />
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M8.25 12h7.5M8.25 15h7.5M8.25 9h3.75"
+                                />
+                            </svg>
+                            Notes
+                        </Link>
                     </li>
                 </ul>
             </div>

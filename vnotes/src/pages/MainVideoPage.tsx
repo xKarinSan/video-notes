@@ -39,7 +39,7 @@ function MainVideoPage() {
         <div>
             <h1 className="text-3xl m-5 text-center ">Video Library</h1>
             <AddNewVideo />
-            <div className="m-auto p-5 grid grid-cols-4 gap-4">
+            <div className="m-auto p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {videos.map((video: Video) => {
                     const { name, id, thumbnail, duration } = video;
                     return (
