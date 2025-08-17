@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Video } from "electron";
+import { useParams, useNavigate } from "react-router-dom";
+import { Video } from "../classes/Video";
 
 function CurrentVideoPage() {
     const { videoId } = useParams();
     const [isLoading, setIsLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
     const [currentVideo, setCurrentVideo] = useState<Video>();
     const [currentVideoFilePath, setCurrentVideoFilePath] =
         useState<string>("");
 
+    const navigate = useNavigate();
     useEffect(() => {
         (async () => {
             const currentVideoInfo = await window.api.getCurrentVideo(videoId);
@@ -24,6 +26,32 @@ function CurrentVideoPage() {
             console.log(video_path);
         })();
     }, []);
+
+    async function createNewNotes() {
+        setIsCreating(true);
+
+        const newNotes = await window.notes
+            .createNewNotes(videoId)
+            .then((newNotes) => {
+                if (newNotes) {
+                    setIsCreating(false);
+                    alert("Notes created successfully!");
+                    // redirect to the notes with the notes.id
+                    console.log("newNotes", newNotes);
+                    const { id } = newNotes;
+                    navigate(`/notes/${id}`);
+                    return;
+                }
+                alert("Failed to create notes.");
+                setIsCreating(false);
+            })
+            .catch((e) => {
+                console.log("E", e);
+                alert("Failed to create notes.");
+                setIsCreating(false);
+            });
+    }
+
     return (
         <div className="flex flex-col items-center justify-center p-6">
             <div className="card w-full max-w-2xl bg-base-200 shadow-xl">
@@ -48,6 +76,16 @@ function CurrentVideoPage() {
                         </video>
                     )}
                 </div>
+            </div>
+            <div>
+                <button
+                    disabled={isCreating}
+                    onClick={() => {
+                        createNewNotes();
+                    }}
+                >
+                    {isCreating ? "Creating..." : "Create New Notes"}
+                </button>
             </div>
         </div>
     );

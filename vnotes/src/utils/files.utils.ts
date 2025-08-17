@@ -1,5 +1,5 @@
 import fsp from "node:fs/promises";
-import { METADATA_DIR, VIDEOS_DIR } from "../../const";
+import { METADATA_DIR, NOTES_DIR, VIDEOS_DIR } from "../../const";
 import path from "node:path";
 
 async function ensureDir(directory) {
@@ -15,11 +15,11 @@ async function fileExists(directory) {
     }
 }
 
-async function getVideoMetadataById(video_id) {
+async function getVideoMetadataById(videoId) {
     try {
         const videoMetadataDirectory = path.join(
             METADATA_DIR,
-            `${video_id}.json`
+            `${videoId}.json`
         );
         const metadataExists = await fileExists(videoMetadataDirectory);
         if (!metadataExists) {
@@ -36,9 +36,9 @@ async function getVideoMetadataById(video_id) {
     }
 }
 
-async function getVideoPathById(video_id) {
+async function getVideoPathById(videoId) {
     try {
-        const videoFileDirectory = path.join(VIDEOS_DIR, `${video_id}.mp4`);
+        const videoFileDirectory = path.join(VIDEOS_DIR, `${videoId}.mp4`);
         const videoFileExists = await fileExists(videoFileDirectory);
         if (!videoFileExists) {
             return null;
@@ -49,4 +49,23 @@ async function getVideoPathById(video_id) {
     }
 }
 
-export { ensureDir, fileExists, getVideoMetadataById, getVideoPathById };
+async function getNotesMetadataById(notesId) {
+    try {
+        const notesMetadataDirectory = path.join(NOTES_DIR, `${notesId}.mp4`);
+        const notesMetadataExists = await fileExists(notesMetadataDirectory);
+        if (!notesMetadataExists) {
+            return null;
+        }
+        return notesMetadataDirectory;
+    } catch {
+        return null;
+    }
+}
+
+export {
+    ensureDir,
+    fileExists,
+    getVideoMetadataById,
+    getVideoPathById,
+    getNotesMetadataById,
+};

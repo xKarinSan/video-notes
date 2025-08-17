@@ -6,7 +6,6 @@ import started from "electron-squirrel-startup";
 import Store from "electron-store";
 import { randomUUID } from "node:crypto";
 import ytdl from "ytdl-core";
-import { pathToFileURL } from "node:url";
 import fs from "node:fs";
 
 import {
@@ -18,9 +17,11 @@ import { METADATA_DIR, VIDEOS_DIR } from "../const";
 import {
     ensureDir,
     fileExists,
+    getNotesMetadataById,
     getVideoMetadataById,
     getVideoPathById,
 } from "./utils/files.utils";
+import { createNotesMetadata } from "./utils/notes.utils";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -70,7 +71,6 @@ ipcMain.handle("get-all-metadata", async () => {
             const jsonPath = path.join(METADATA_DIR, filename);
             const baseId = filename.replace(/\.json$/i, "");
             const videoPath = path.join(VIDEOS_DIR, `${baseId}.mp4`);
-
             const [raw, hasVideo] = await Promise.all([
                 fsp.readFile(jsonPath, "utf8"),
                 fileExists(videoPath),
@@ -90,41 +90,41 @@ ipcMain.handle("get-all-metadata", async () => {
     return items;
 });
 
-ipcMain.handle("add-current-video", async (_, video_url) => {
+ipcMain.handle("add-current-video", async (_, videoUrl) => {
     try {
-        const youtube_video_id = getYoutubeVideoId(video_url);
-        console.log(youtube_video_id);
-        if (!youtube_video_id) {
-            console.log("Invalid YouTube URL:", video_url);
+        const youtubeVideoId = getYoutubeVideoId(videoUrl);
+        console.log(youtubeVideoId);
+        if (!youtubeVideoId) {
+            console.log("Invalid YouTube URL:", videoUrl);
             return null;
         }
         await ensureDir(METADATA_DIR);
         await ensureDir(VIDEOS_DIR);
 
-        let video_id = store.get(youtube_video_id);
-        let video_metadata = {};
+        let videoId = store.get(youtubeVideoId);
+        let videoMetadata = {};
         let videoMetadataFilePath = "";
 
-        if (video_id) {
+        if (videoId) {
             console.log("video exists!");
-            videoMetadataFilePath = path.join(METADATA_DIR, `${video_id}.json`);
+            videoMetadataFilePath = path.join(METADATA_DIR, `${videoId}.json`);
             const raw = await fsp.readFile(videoMetadataFilePath, "utf8");
             try {
-                video_metadata = JSON.parse(raw);
-                video_metadata.id = video_id;
+                videoMetadata = JSON.parse(raw);
+                videoMetadata.id = videoId;
             } catch {
-                video_metadata = null;
+                videoMetadata = null;
             }
-            return video_metadata;
+            return videoMetadata;
         }
-        video_id = randomUUID();
-        const basicInfo = await ytdl.getInfo(video_url);
+        videoId = randomUUID();
+        const basicInfo = await ytdl.getInfo(videoUrl);
         const { videoDetails, formats } = basicInfo;
         const {
             title,
             description,
             lengthSeconds: timestamp,
-            video_url: retrieved_url,
+            videoUrl: retrieved_url,
             uploadDate,
             author,
             thumbnails,
@@ -135,32 +135,32 @@ ipcMain.handle("add-current-video", async (_, video_url) => {
         const streamingUrl = format.url;
         const isVideoDownloaded = await downloadVideoFile(
             streamingUrl,
-            video_id
+            videoId
         );
 
         const largestThumbnail = thumbnails[thumbnails.length - 1];
         const uploadDateInMs = new Date(uploadDate).getTime();
         const opName = author.name;
-        video_metadata = {
-            id: video_id,
-            video_url: retrieved_url,
+        videoMetadata = {
+            id: videoId,
+            videoUrl: retrieved_url,
             name: title,
             description: description,
-            date_extracted: Date.now(),
+            dateExtracted: Date.now(),
             thumbnail: largestThumbnail.url,
-            date_uploaded: uploadDateInMs,
-            op_name: opName,
+            dateUploaded: uploadDateInMs,
+            opName: opName,
             duration: parseInt(timestamp),
         };
 
         const isMetadataDownloaded = await downloadVideoMetadata(
-            video_metadata,
-            video_id
+            videoMetadata,
+            videoId
         );
 
         if (isVideoDownloaded && isMetadataDownloaded) {
-            store.set(youtube_video_id, video_id);
-            return video_metadata;
+            store.set(youtubeVideoId, videoId);
+            return videoMetadata;
         }
         return null;
     } catch {
@@ -168,13 +168,9 @@ ipcMain.handle("add-current-video", async (_, video_url) => {
     }
 });
 
-ipcMain.handle("get-current-video", async (_, video_id) => {
-    // check if metadata exists
-    const videoMetadata = await getVideoMetadataById(video_id);
-    console.log("videoMetadata", videoMetadata);
-    // check if path exists
-    const videoFilePath = await getVideoPathById(video_id);
-    console.log("videoFilePath", videoFilePath);
+ipcMain.handle("get-current-video", async (_, videoId) => {
+    const videoMetadata = await getVideoMetadataById(videoId);
+    const videoFilePath = await getVideoPathById(videoId);
     if (!(videoMetadata && videoFilePath)) {
         return null;
     }
@@ -186,6 +182,35 @@ ipcMain.handle("get-current-video", async (_, video_id) => {
         metadata: videoMetadata,
         video_path: dataUrl,
     };
+});
+
+ipcMain.handle("create-new-notes", async (_, videoId) => {
+    try {
+        const newNotes = await createNotesMetadata(videoId);
+        return newNotes;
+    } catch {
+        return null;
+    }
+});
+
+ipcMain.handle("get-current-notes", async (_, notesId) => {
+    try {
+        const currentNotesMetadata = await getNotesMetadataById(notesId);
+        if (!currentNotesMetadata) {
+            return null;
+        }
+        const { videoId } = currentNotesMetadata;
+        const videoMetadata = await getVideoMetadataById(videoId);
+        if (!videoMetadata) {
+            return null;
+        }
+        return {
+            videoMetadata: videoMetadata,
+            notesMetadata: currentNotesMetadata,
+        };
+    } catch {
+        return null;
+    }
 });
 
 // APP LIFECYCLE

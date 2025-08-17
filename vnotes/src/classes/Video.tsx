@@ -3,10 +3,10 @@ interface Video {
     url: string;
     name: string;
     description: string;
-    date_extracted: number;
+    dateExtracted: number;
     thumbnail: string;
-    date_uploaded: number;
-    op_name: string;
+    dateUploaded: number;
+    opName: string;
     duration: number;
 }
 

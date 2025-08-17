@@ -4,8 +4,16 @@ import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("api", {
     listMetadata: async () => await ipcRenderer.invoke("get-all-metadata"),
-    getVideodata: async (video_url) =>
-        await ipcRenderer.invoke("add-current-video", video_url),
-    getCurrentVideo: async (video_id) =>
-        await ipcRenderer.invoke("get-current-video", video_id),
+    getVideodata: async (videoUrl) =>
+        await ipcRenderer.invoke("add-current-video", videoUrl),
+    getCurrentVideo: async (videoId) =>
+        await ipcRenderer.invoke("get-current-video", videoId),
 });
+
+contextBridge.exposeInMainWorld("notes", {
+    createNewNotes: async (videoId) =>
+        await ipcRenderer.invoke("create-new-notes", videoId),
+    getCurrentNotes: async (notesId) =>
+        await ipcRenderer.invoke("get-current-notes", notesId),
+});
+
