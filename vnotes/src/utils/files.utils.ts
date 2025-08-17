@@ -51,12 +51,17 @@ async function getVideoPathById(videoId) {
 
 async function getNotesMetadataById(notesId) {
     try {
-        const notesMetadataDirectory = path.join(NOTES_DIR, `${notesId}.mp4`);
+        const notesMetadataDirectory = path.join(NOTES_DIR, `${notesId}.json`);
         const notesMetadataExists = await fileExists(notesMetadataDirectory);
         if (!notesMetadataExists) {
             return null;
         }
-        return notesMetadataDirectory;
+        const notesMetadataContent = await fsp.readFile(
+            notesMetadataDirectory,
+            "utf-8"
+        );
+        const parsedMetadata = JSON.parse(notesMetadataContent);
+        return parsedMetadata;
     } catch {
         return null;
     }

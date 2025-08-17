@@ -2,11 +2,11 @@ import { Link, Outlet } from "react-router-dom";
 
 function Layout() {
     return (
-        <div className="drawer">
+        <div className="drawer sm:drawer-open">
             <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
             <div className="drawer-content flex flex-col">
                 <div className="navbar bg-base-300 w-full">
-                    <div className="flex-none lg:hidden">
+                    <div className="flex-none sm:hidden">
                         <label
                             htmlFor="my-drawer-3"
                             aria-label="open sidebar"
@@ -28,7 +28,7 @@ function Layout() {
                         </label>
                     </div>
                     <div className="mx-2 flex-1 px-2">VNotes</div>
-                    <div className="hidden flex-none lg:block">
+                    <div className="hidden flex-none sm:hidden">
                         <ul className="menu menu-horizontal">
                             <li>
                                 <Link to="/">Home</Link>
@@ -50,8 +50,7 @@ function Layout() {
                     aria-label="close sidebar"
                     className="drawer-overlay"
                 ></label>
-                <ul className="menu bg-base-200 min-h-full w-80 p-4">
-                    {/* Sidebar content here */}
+                <ul className="menu bg-base-200 min-h-full w-50 p-4">
                     <li>
                         <Link to="/">Home</Link>
                     </li>

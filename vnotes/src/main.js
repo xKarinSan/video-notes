@@ -204,11 +204,22 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
         if (!videoMetadata) {
             return null;
         }
+
+        const videoFilePath = await getVideoPathById(videoId);
+        if (!(videoMetadata && videoFilePath)) {
+            return null;
+        }
+
+        const buffer = fs.readFileSync(videoFilePath);
+        const base64 = buffer.toString("base64");
+        const dataUrl = `data:video/mp4;base64,${base64}`;
         return {
             videoMetadata: videoMetadata,
             notesMetadata: currentNotesMetadata,
+            videoPath: dataUrl,
         };
-    } catch {
+    } catch (e){
+        console.log("get-current-notes | e ",e)
         return null;
     }
 });
