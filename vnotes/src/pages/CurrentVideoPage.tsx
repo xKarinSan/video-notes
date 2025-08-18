@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Video } from "../classes/Video";
 import { NotesMetadata } from "../classes/Notes";
 
@@ -11,8 +11,9 @@ function CurrentVideoPage() {
     const [currentVideoFilePath, setCurrentVideoFilePath] =
         useState<string>("");
 
-    const [currentNotesMetadata, setCurrentNotesMetadata] =
-        useState<NotesMetadata>([]);
+    const [currentNotesMetadataList, setCurrentNotesMetadataList] = useState<
+        NotesMetadata[]
+    >([]);
 
     const navigate = useNavigate();
     useEffect(() => {
@@ -30,7 +31,7 @@ function CurrentVideoPage() {
             console.log("notesMetadata", notesMetadata);
 
             if (notesMetadata) {
-                setCurrentNotesMetadata(notesMetadata);
+                setCurrentNotesMetadataList(notesMetadata);
             }
             setIsLoading(false);
         })();
@@ -124,7 +125,79 @@ function CurrentVideoPage() {
                     )}
                 </div>
             </div>
-            <div></div>
+            <div>
+                <div className="overflow-x-scroll">
+                    <table className="table">
+                        <thead>
+                            <tr>
+                                <th>Id</th>
+                                <th>Title</th>
+                                <th>Created At</th>
+                                <th>Last Edited At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {currentNotesMetadataList.map(
+                                (currentNotesMetadata) => {
+                                    const {
+                                        id,
+                                        title,
+                                        createdDate,
+                                        lastEdited,
+                                    } = currentNotesMetadata;
+                                    const createdDateString = new Date(
+                                        createdDate
+                                    ).toLocaleString();
+                                    const lastEditedDateString =
+                                        lastEdited != -1
+                                            ? new Date(
+                                                  createdDate
+                                              ).toLocaleString()
+                                            : "N/A";
+                                    return (
+                                        <tr>
+                                            <td>{id}</td>
+                                            <td>{title}</td>
+                                            <td>{createdDateString}</td>
+                                            <td>{lastEditedDateString}</td>
+                                            <td>
+                                                <button
+                                                    onClick={() =>
+                                                        navigate(`/notes/${id}`)
+                                                    }
+                                                    className="btn btn-black btn-xs btn-square m-2"
+                                                    title="View note"
+                                                >
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        strokeWidth={2}
+                                                        stroke="currentColor"
+                                                        className="w-5 h-5"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z"
+                                                        />
+                                                        <circle
+                                                            cx="12"
+                                                            cy="12"
+                                                            r="3"
+                                                        />
+                                                    </svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 }

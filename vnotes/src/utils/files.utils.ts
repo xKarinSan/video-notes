@@ -1,6 +1,7 @@
 import fsp from "node:fs/promises";
 import { METADATA_DIR, NOTES_DIR, VIDEOS_DIR } from "../../const";
 import path from "node:path";
+import { NotesMetadata } from "../classes/Notes";
 
 async function ensureDir(directory) {
     await fsp.mkdir(directory, { recursive: true });
@@ -68,10 +69,33 @@ async function getNotesMetadataById(notesId) {
     }
 }
 
+async function getAllNotesMetadata() {
+    try {
+        const files = await fsp.readdir(NOTES_DIR);
+        const notesMetadataList: NotesMetadata[] = [];
+
+        for (const file of files) {
+            if (file.endsWith(".json")) {
+                const notesId = file.replace(".json", "");
+                const metadata: NotesMetadata =
+                    await getNotesMetadataById(notesId);
+                if (metadata) {
+                    notesMetadataList.push(metadata);
+                }
+            }
+        }
+
+        return notesMetadataList;
+    } catch (e) {
+        return null;
+    }
+}
+
 export {
     ensureDir,
     fileExists,
     getVideoMetadataById,
     getVideoPathById,
     getNotesMetadataById,
+    getAllNotesMetadata,
 };

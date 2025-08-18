@@ -17,6 +17,7 @@ import { METADATA_DIR, VIDEOS_DIR } from "../const";
 import {
     ensureDir,
     fileExists,
+    getAllNotesMetadata,
     getNotesMetadataById,
     getVideoMetadataById,
     getVideoPathById,
@@ -228,25 +229,30 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
 ipcMain.handle("get-notes-by-videoid", async (_, videoId) => {
     try {
         const currentVideo = await getVideoMetadataById(videoId);
-        console.log("currentVideo", currentVideo);
         if (!currentVideo) {
             return null;
         }
         const { notesIdList } = currentVideo;
-        console.log("notesIdList", notesIdList);
-
         let res = [];
-
         for (let i = 0; i < notesIdList.length; i++) {
             let notesMetadata = await getNotesMetadataById(notesIdList[i]);
             if (!notesMetadata) {
-                continue
+                continue;
             }
             res = [...res, notesMetadata];
         }
         return res.filter((note) => note !== null);
     } catch (e) {
         console.log("get-notes-by-videoid | e ", e);
+        return null;
+    }
+});
+
+ipcMain.handle("get-all-notes-metadata", async () => {
+    try {
+        return getAllNotesMetadata();
+    } catch (e) {
+        console.log("get-all-notes-metadata | e ", e);
         return null;
     }
 });

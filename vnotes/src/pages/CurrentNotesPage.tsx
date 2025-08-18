@@ -10,6 +10,7 @@ function CurrentNotesPage() {
     const { notesId } = useParams();
     const [isLoading, setIsLoading] = useState(true);
     const [currentVideo, setCurrentVideo] = useState<Video>();
+    const [currentVideoDate, setCurrentVideoDate] = useState<string>("");
     const [currentVideoFilePath, setCurrentVideoFilePath] =
         useState<string>("");
     const [currentNotesMetadata, setCurrentNotesMetadata] =
@@ -31,6 +32,9 @@ function CurrentNotesPage() {
                     }
                     const { videoMetadata, notesMetadata, videoPath } =
                         currentNotesInfo;
+                    setCurrentVideoDate(
+                        new Date(videoMetadata.dateUploaded).toLocaleString()
+                    );
                     setCurrentVideo(videoMetadata);
                     setCurrentVideoFilePath(videoPath);
                     setCurrentNotesMetadata(notesMetadata);
@@ -99,6 +103,21 @@ function CurrentNotesPage() {
         canvas = null;
     }
 
+    function formatTimestamp(timestampSeconds) {
+        const hours = Math.floor(timestampSeconds / 3600);
+        const minutes = Math.floor((timestampSeconds % 3600) / 60);
+        const seconds = timestampSeconds % 60;
+
+        // Pad hours/minutes
+        const hh = String(hours).padStart(2, "0");
+        const mm = String(minutes).padStart(2, "0");
+
+        // Seconds with 3 decimal places
+        const ss = seconds.toFixed(3).padStart(6, "0");
+
+        return `${hh}:${mm}:${ss}`;
+    }
+
     async function exportToPdf() {
         if (!currentNotesMetadata) return;
 
@@ -164,7 +183,7 @@ function CurrentNotesPage() {
             <div className="flex justify-start m-2 w-full">
                 <button
                     className="btn m-1 btn-sm w-fit"
-                    onClick={() => navigate("/notes")} // go back in history
+                    onClick={() => navigate("/notes")}
                 >
                     ← Back
                 </button>
@@ -174,9 +193,6 @@ function CurrentNotesPage() {
                 <div className="flex flex-col items-center">
                     <div className="card w-full bg-base-500 shadow-xl">
                         <div className="card-body items-center text-center">
-                            <h1 className="card-title text-2xl font-bold">
-                                {currentVideo?.name ?? "N/A"}
-                            </h1>
                             {isLoading ? (
                                 <span className="loading loading-spinner loading-lg mt-6"></span>
                             ) : (
@@ -192,6 +208,12 @@ function CurrentNotesPage() {
                                 </video>
                             )}
                         </div>
+                        <h2 className="m-2 px-4 text-left">
+                            {currentVideo?.name ?? "N/A"}
+                        </h2>
+                        <h2 className="m-2 px-4 text-left">
+                            Uploaded on: {currentVideoDate}
+                        </h2>
                     </div>
 
                     <div className="flex flex-wrap my-2">
@@ -263,55 +285,61 @@ function CurrentNotesPage() {
                     </button>
                 </div>
 
-                <div className="overflow-y-auto max-h-[80vh]">
-                    {currentNotes.map((note: NotesItem, idx) => {
-                        const { timestamp, content, isSnapshot, id } = note;
-                        return (
-                            <div
-                                key={idx}
-                                className="card bg-base-300 shadow-sm m-2"
-                            >
-                                <div className="card-body p-2">
-                                    <div className="flex">
-                                        <p className="text-sm text-gray-500">
-                                            Timestamp: {timestamp}
-                                        </p>
-                                        <button
-                                            className="btn btn-black btn-xs btn-square"
-                                            onClick={() =>
-                                                deleteNoteContent(id)
-                                            }
-                                        >
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                strokeWidth={1.5}
-                                                stroke="currentColor"
-                                                className="w-4 h-4"
+                <div>
+                    <h1 className="card-title text-2xl font-bold m-5">
+                        {currentNotesMetadata?.title ?? "N/A"}
+                    </h1>
+                    <div className="overflow-y-auto max-h-[80vh]">
+                        {currentNotes.map((note: NotesItem, idx) => {
+                            const { timestamp, content, isSnapshot, id } = note;
+                            return (
+                                <div
+                                    key={idx}
+                                    className="card bg-base-300 shadow-sm m-2"
+                                >
+                                    <div className="card-body p-2">
+                                        <div className="flex">
+                                            <p className="text-sm text-gray-500">
+                                                Timestamp:{" "}
+                                                {formatTimestamp(timestamp)}
+                                            </p>
+                                            <button
+                                                className="btn btn-black btn-xs btn-square"
+                                                onClick={() =>
+                                                    deleteNoteContent(id)
+                                                }
                                             >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M6 18L18 6M6 6l12 12"
-                                                />
-                                            </svg>
-                                        </button>
-                                    </div>
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    strokeWidth={1.5}
+                                                    stroke="currentColor"
+                                                    className="w-4 h-4"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M6 18L18 6M6 6l12 12"
+                                                    />
+                                                </svg>
+                                            </button>
+                                        </div>
 
-                                    {isSnapshot ? (
-                                        <img
-                                            src={content}
-                                            alt={`Snapshot at ${timestamp}`}
-                                            className="rounded-lg"
-                                        />
-                                    ) : (
-                                        <p className="my-2">{content}</p>
-                                    )}
+                                        {isSnapshot ? (
+                                            <img
+                                                src={content}
+                                                alt={`Snapshot at ${timestamp}`}
+                                                className="rounded-lg"
+                                            />
+                                        ) : (
+                                            <p className="my-2">{content}</p>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>
