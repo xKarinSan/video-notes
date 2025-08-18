@@ -18,6 +18,9 @@ function CurrentNotesPage() {
     const [currentNotes, setCurrentNotes] = useState<NotesItem[]>([]);
     const [currentNotesContent, setCurrentNotesContent] = useState<string>("");
 
+    const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+    const [editContent, setEditContent] = useState<string>("");
+
     const videoRef = useRef();
     const navigate = useNavigate();
 
@@ -42,6 +45,29 @@ function CurrentNotesPage() {
                 });
         })();
     }, []);
+
+    function startEditing(note: NotesItem) {
+        setEditingNoteId(note.id);
+        setEditContent(note.content);
+    }
+
+    function saveEditedNote() {
+        if (!editingNoteId) return;
+        setCurrentNotes((prev) =>
+            prev.map((note) =>
+                note.id === editingNoteId
+                    ? { ...note, content: editContent }
+                    : note
+            )
+        );
+        setEditingNoteId(null);
+        setEditContent("");
+    }
+
+    function cancelEditing() {
+        setEditingNoteId(null);
+        setEditContent("");
+    }
 
     function addNoteContent() {
         if (!videoRef.current) return;
@@ -303,6 +329,19 @@ function CurrentNotesPage() {
                                                 Timestamp:{" "}
                                                 {formatTimestamp(timestamp)}
                                             </p>
+                                            {!isSnapshot &&
+                                            !(editingNoteId === id) ? (
+                                                <button
+                                                    className="btn btn-xs bg-blue-700"
+                                                    onClick={() =>
+                                                        startEditing(note)
+                                                    }
+                                                >
+                                                    Edit
+                                                </button>
+                                            ) : (
+                                                <></>
+                                            )}
                                             <button
                                                 className="btn btn-black btn-xs btn-square"
                                                 onClick={() =>
@@ -332,8 +371,38 @@ function CurrentNotesPage() {
                                                 alt={`Snapshot at ${timestamp}`}
                                                 className="rounded-lg"
                                             />
+                                        ) : editingNoteId === id ? (
+                                            <div className="flex flex-col gap-2">
+                                                <textarea
+                                                    className="textarea textarea-bordered w-full"
+                                                    value={editContent}
+                                                    onChange={(e) =>
+                                                        setEditContent(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                />
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        className="btn btn-sm bg-blue-700"
+                                                        onClick={saveEditedNote}
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-sm"
+                                                        onClick={cancelEditing}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
                                         ) : (
-                                            <p className="my-2">{content}</p>
+                                            <div className="flex justify-between items-center">
+                                                <p className="my-2">
+                                                    {content}
+                                                </p>
+                                            </div>
                                         )}
                                     </div>
                                 </div>

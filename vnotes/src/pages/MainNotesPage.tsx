@@ -24,6 +24,8 @@ function MainNotesPage() {
             }
         })();
     }, []);
+
+    function deleteNoteContent() {}
     return (
         <div>
             <h1 className="text-3xl m-5 text-center ">Notes Library</h1>
@@ -77,6 +79,28 @@ function MainNotesPage() {
                                                     d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z"
                                                 />
                                                 <circle cx="12" cy="12" r="3" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={() =>
+                                                deleteNoteContent(id)
+                                            }
+                                            className="btn btn-black btn-xs btn-square m-2"
+                                            title="Delete note"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                strokeWidth={2}
+                                                stroke="currentColor"
+                                                className="w-5 h-5"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M6 7h12M9 7V4h6v3m-9 0v12a2 2 0 002 2h6a2 2 0 002-2V7"
+                                                />
                                             </svg>
                                         </button>
                                     </td>
