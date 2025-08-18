@@ -15,5 +15,7 @@ contextBridge.exposeInMainWorld("notes", {
         await ipcRenderer.invoke("create-new-notes", videoId),
     getCurrentNotes: async (notesId) =>
         await ipcRenderer.invoke("get-current-notes", notesId),
+    getNotesByVideoId: async(videoId)=>
+        await ipcRenderer.invoke("get-notes-by-videoid", videoId),
 });
 

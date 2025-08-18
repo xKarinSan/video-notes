@@ -6,11 +6,6 @@ interface NotesMetadata {
     lastEdited: number;
 }
 
-interface VideoNotesMapping {
-    videoId: string;
-    notesId: string;
-}
-
 interface NotesItem {
     id: string;
     isSnapshot: boolean; // true if snapshot, else return false
@@ -18,4 +13,4 @@ interface NotesItem {
     timestamp: number; // -1 if not timestamped if not exact timestamp
 }
 
-export { NotesMetadata, VideoNotesMapping, NotesItem };
+export { NotesMetadata, NotesItem };

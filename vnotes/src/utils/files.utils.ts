@@ -53,6 +53,7 @@ async function getNotesMetadataById(notesId) {
     try {
         const notesMetadataDirectory = path.join(NOTES_DIR, `${notesId}.json`);
         const notesMetadataExists = await fileExists(notesMetadataDirectory);
+
         if (!notesMetadataExists) {
             return null;
         }
@@ -62,7 +63,7 @@ async function getNotesMetadataById(notesId) {
         );
         const parsedMetadata = JSON.parse(notesMetadataContent);
         return parsedMetadata;
-    } catch {
+    } catch (e) {
         return null;
     }
 }

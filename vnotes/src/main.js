@@ -151,6 +151,7 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             dateUploaded: uploadDateInMs,
             opName: opName,
             duration: parseInt(timestamp),
+            notesIdList: [],
         };
 
         const isMetadataDownloaded = await downloadVideoMetadata(
@@ -218,8 +219,34 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
             notesMetadata: currentNotesMetadata,
             videoPath: dataUrl,
         };
-    } catch (e){
-        console.log("get-current-notes | e ",e)
+    } catch (e) {
+        console.log("get-current-notes | e ", e);
+        return null;
+    }
+});
+
+ipcMain.handle("get-notes-by-videoid", async (_, videoId) => {
+    try {
+        const currentVideo = await getVideoMetadataById(videoId);
+        console.log("currentVideo", currentVideo);
+        if (!currentVideo) {
+            return null;
+        }
+        const { notesIdList } = currentVideo;
+        console.log("notesIdList", notesIdList);
+
+        let res = [];
+
+        for (let i = 0; i < notesIdList.length; i++) {
+            let notesMetadata = await getNotesMetadataById(notesIdList[i]);
+            if (!notesMetadata) {
+                continue
+            }
+            res = [...res, notesMetadata];
+        }
+        return res.filter((note) => note !== null);
+    } catch (e) {
+        console.log("get-notes-by-videoid | e ", e);
         return null;
     }
 });

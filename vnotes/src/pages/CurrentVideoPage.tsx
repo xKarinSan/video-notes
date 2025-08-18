@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Video } from "../classes/Video";
+import { NotesMetadata } from "../classes/Notes";
 
 function CurrentVideoPage() {
     const { videoId } = useParams();
@@ -9,6 +10,9 @@ function CurrentVideoPage() {
     const [currentVideo, setCurrentVideo] = useState<Video>();
     const [currentVideoFilePath, setCurrentVideoFilePath] =
         useState<string>("");
+
+    const [currentNotesMetadata, setCurrentNotesMetadata] =
+        useState<NotesMetadata>([]);
 
     const navigate = useNavigate();
     useEffect(() => {
@@ -21,6 +25,13 @@ function CurrentVideoPage() {
             const { metadata, video_path } = currentVideoInfo;
             setCurrentVideo(metadata);
             setCurrentVideoFilePath(video_path);
+            // also load the notes metadata
+            const notesMetadata = await window.notes.getNotesByVideoId(videoId);
+            console.log("notesMetadata", notesMetadata);
+
+            if (notesMetadata) {
+                setCurrentNotesMetadata(notesMetadata);
+            }
             setIsLoading(false);
         })();
     }, []);

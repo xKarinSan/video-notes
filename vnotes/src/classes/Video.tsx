@@ -8,6 +8,7 @@ interface Video {
     dateUploaded: number;
     opName: string;
     duration: number;
+    notesIdList: string[];
 }
 
 interface Transcript {
