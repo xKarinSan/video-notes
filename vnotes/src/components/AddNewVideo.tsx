@@ -1,25 +1,34 @@
 import { useState } from "react";
+import { Video } from "../classes/Video";
+type AddNewVideoProps = {
+    onVideoAdded?: (video: Video) => void;
+};
 
-function AddNewVideo() {
+function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     const [videoUrl, setVideoURL] = useState("");
     const [isUploading, setIsUploading] = useState(false);
     async function addVideo() {
-        setIsUploading(true);
-        await window.api
-            .getVideodata(videoUrl)
-            .then((res) => {
-                if (res) {
-                    setIsUploading(false);
-                    alert("Video added!");
-                    return;
-                }
-                setIsUploading(false);
+        try {
+            setIsUploading(true);
+
+            const res = await window.api.getVideodata(videoUrl);
+
+            setIsUploading(false);
+
+            if (res) {
+                console.log("[addVideo] res", res);
+                onVideoAdded?.(res);
+                alert("Video added!");
+                return res;
+            } else {
                 alert("Video failed to add");
-            })
-            .catch((e) => {
-                setIsUploading(false);
-                alert("Video failed to add");
-            });
+                return null;
+            }
+        } catch (e) {
+            setIsUploading(false);
+            alert("Video failed to add");
+            return null;
+        }
     }
     return (
         <div>

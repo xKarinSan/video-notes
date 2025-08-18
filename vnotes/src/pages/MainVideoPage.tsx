@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import AddNewVideo from "../components/AddNewVideo";
+import { Video } from "../classes/Video";
 
 function MainVideoPage() {
     const [videos, setVideos] = useState<Video[]>([]);
@@ -18,6 +19,9 @@ function MainVideoPage() {
             .padStart(2, "0");
 
         return `${h}:${m}:${s}`;
+    }
+    function handleVideoAdded(newVideo: Video) {
+        setVideos((videos) => [...videos, newVideo]); // prepend or append
     }
 
     useEffect(() => {
@@ -38,7 +42,7 @@ function MainVideoPage() {
     return (
         <div>
             <h1 className="text-3xl m-5 text-center ">Video Library</h1>
-            <AddNewVideo />
+            <AddNewVideo onVideoAdded={handleVideoAdded} />
             <div className="m-auto p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {videos.map((video: Video) => {
                     const { name, id, thumbnail, duration } = video;
