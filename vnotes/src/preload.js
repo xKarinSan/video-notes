@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld("api", {
         await ipcRenderer.invoke("add-current-video", videoUrl),
     getCurrentVideo: async (videoId) =>
         await ipcRenderer.invoke("get-current-video", videoId),
+    deleteCurrentVideo: async (videoId) =>
+        await ipcRenderer.invoke("delete-video-record", videoId),
 });
 
 contextBridge.exposeInMainWorld("notes", {

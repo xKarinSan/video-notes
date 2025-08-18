@@ -12,6 +12,9 @@ import {
     getYoutubeVideoId,
     downloadVideoMetadata,
     downloadVideoFile,
+    deleteVideoMetadata,
+    deleteVideoFile,
+    deleteVideoRecord,
 } from "./utils/youtubeVideo.utils";
 import { METADATA_DIR, VIDEOS_DIR } from "../const";
 import {
@@ -22,7 +25,7 @@ import {
     getVideoMetadataById,
     getVideoPathById,
 } from "./utils/files.utils";
-import { createNotesMetadata } from "./utils/notes.utils";
+import { createNotesMetadata, deleteNotesMetadata } from "./utils/notes.utils";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -118,6 +121,7 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             }
             return videoMetadata;
         }
+
         videoId = randomUUID();
         const basicInfo = await ytdl.getInfo(videoUrl);
         const { videoDetails, formats } = basicInfo;
@@ -133,12 +137,14 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
 
         const format = ytdl.chooseFormat(formats, { quality: "18" });
 
+        // download the video itself
         const streamingUrl = format.url;
         const isVideoDownloaded = await downloadVideoFile(
             streamingUrl,
             videoId
         );
 
+        // download the metadata
         const largestThumbnail = thumbnails[thumbnails.length - 1];
         const uploadDateInMs = new Date(uploadDate).getTime();
         const opName = author.name;
@@ -160,11 +166,20 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             videoId
         );
 
-        if (isVideoDownloaded && isMetadataDownloaded) {
-            store.set(youtubeVideoId, videoId);
-            return videoMetadata;
+        if (!(isVideoDownloaded && isMetadataDownloaded)) {
+            // implement rollback
+            if (!isVideoDownloaded) {
+                // rollback metadata
+                await deleteVideoMetadata(videoId);
+            }
+            if (!isMetadataDownloaded) {
+                // rollback video download
+                await deleteVideoFile(videoId);
+            }
+            return null;
         }
-        return null;
+        store.set(youtubeVideoId, videoId);
+        return videoMetadata;
     } catch {
         return null;
     }
@@ -254,6 +269,35 @@ ipcMain.handle("get-all-notes-metadata", async () => {
     } catch (e) {
         console.log("get-all-notes-metadata | e ", e);
         return null;
+    }
+});
+
+ipcMain.handle("delete-video-record", async (_,videoId) => {
+    try {
+        console.log("delete-video-record");
+        console.log("videoId",videoId)
+        if (!videoId) {
+            return false;
+        }
+        // get the metadata and associated video ids
+        const videoMetadata = await getVideoMetadataById(videoId);
+        if (!videoMetadata) {
+            return false;
+        }
+        console.log("videoMetadata", videoMetadata);
+        const { notesIdList } = videoMetadata;
+        console.log("notesIdList", notesIdList);
+
+        const [notesDeleted, recordDeleted] = await Promise.all([
+            deleteNotesMetadata(notesIdList),
+            deleteVideoRecord(videoId),
+        ]);
+        if (!notesDeleted || !recordDeleted) return false;
+        store.delete(videoId);
+        return true;
+    } catch (e) {
+        console.log("delete-video-record | e", e);
+        false;
     }
 });
 

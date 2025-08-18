@@ -7,6 +7,7 @@ function CurrentVideoPage() {
     const { videoId } = useParams();
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [currentVideo, setCurrentVideo] = useState<Video>();
     const [currentVideoFilePath, setCurrentVideoFilePath] =
         useState<string>("");
@@ -60,12 +61,32 @@ function CurrentVideoPage() {
             });
     }
 
+    async function deleteVideo() {
+        if (!confirm("Are you sure you want to delete this video?")) {
+            return;
+        }
+        setIsDeleting(true);
+        try {
+            const deleted = await window.api.deleteCurrentVideo(videoId);
+            if (deleted) {
+                alert("Video deleted successfully.");
+                navigate("/videos");
+            } else {
+                alert("Failed to delete video.");
+            }
+        } catch (e) {
+            console.error("Delete video error:", e);
+            alert("Error deleting video.");
+        } finally {
+            setIsDeleting(false);
+        }
+    }
     return (
         <div className="flex flex-col items-center justify-center">
             <div className="flex flejustify-start m-2 w-full">
                 <button
                     className="btn m-1 btn-sm"
-                    onClick={() => navigate("/")} // go back in history
+                    onClick={() => navigate("/videos")} // go back in history
                 >
                     ← Back
                 </button>
@@ -89,38 +110,51 @@ function CurrentVideoPage() {
                                     type="video/mp4"
                                 />
                             </video>
-                            <button
-                                className={`btn bg-blue-700 w-fit mt-4 text-white flex items-center gap-2 ${
-                                    isCreating ? "btn-disabled loading" : ""
-                                }`}
-                                disabled={isCreating}
-                                onClick={createNewNotes}
-                            >
-                                {!isCreating && (
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        strokeWidth={1.5}
-                                        stroke="currentColor"
-                                        className="w-5 h-5"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652l-9.193 9.193a4.5 4.5 0 01-1.897 1.13L7.5 16.5l.426-2.611a4.5 4.5 0 011.13-1.897l7.806-7.805z"
-                                        />
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M19.5 7.125L16.862 4.487"
-                                        />
-                                    </svg>
-                                )}
-                                {isCreating
-                                    ? "Creating..."
-                                    : "Create New Notes"}
-                            </button>
+                            <div className="flex mt-4 gap-2">
+                                <button
+                                    className={`btn bg-blue-700 w-fit text-white flex items-center ${
+                                        isCreating ? "btn-disabled loading" : ""
+                                    }`}
+                                    disabled={isCreating}
+                                    onClick={createNewNotes}
+                                >
+                                    {!isCreating && (
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            strokeWidth={1.5}
+                                            stroke="currentColor"
+                                            className="w-5 h-5"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652l-9.193 9.193a4.5 4.5 0 01-1.897 1.13L7.5 16.5l.426-2.611a4.5 4.5 0 011.13-1.897l7.806-7.805z"
+                                            />
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M19.5 7.125L16.862 4.487"
+                                            />
+                                        </svg>
+                                    )}
+                                    {isCreating
+                                        ? "Creating..."
+                                        : "Create New Notes"}
+                                </button>
+                                <button
+                                    className={`btn bg-red-700 w-fit text-white flex items-center ${
+                                        isDeleting ? "loading btn-disabled" : ""
+                                    }`}
+                                    onClick={deleteVideo}
+                                    disabled={isDeleting}
+                                >
+                                    {isDeleting
+                                        ? "Deleting..."
+                                        : "Delete Video"}
+                                </button>
+                            </div>
                         </>
                     )}
                 </div>

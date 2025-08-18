@@ -39,4 +39,28 @@ async function createNotesMetadata(videoId) {
     }
 }
 
-export { createNotesMetadata };
+async function deleteNotesMetadata(notesIdList) {
+    try {
+        await ensureDir(NOTES_DIR);
+        for (const notesId of notesIdList) {
+            const notesMetadataFilePath = path.join(
+                NOTES_DIR,
+                `${notesId}.json`
+            );
+            const notesMetadataExists = await fsp
+                .access(notesMetadataFilePath)
+                .then(() => true)
+                .catch(() => false);
+
+            if (notesMetadataExists) {
+                await fsp.unlink(notesMetadataFilePath);
+            }
+        }
+    } catch (e) {
+        console.log("deleteNotesMetadata | e", e);
+        return false;
+    }
+    return true;
+}
+
+export { createNotesMetadata, deleteNotesMetadata };
