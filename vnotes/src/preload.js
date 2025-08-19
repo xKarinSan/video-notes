@@ -22,4 +22,6 @@ contextBridge.exposeInMainWorld("notes", {
 
     getAllNotesMetadata: async () =>
         await ipcRenderer.invoke("get-all-notes-metadata"),
+    deleteNotesMetadataById: async (notesId) =>
+        await ipcRenderer.invoke("delete-notes-record", notesId),
 });

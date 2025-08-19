@@ -5,7 +5,11 @@ import fs, { lstat } from "node:fs";
 import { NotesItem, NotesMetadata } from "../classes/Notes";
 import { NOTES_DIR, VIDEOS_NOTES_MAP_DIR } from "../../const";
 import { randomUUID } from "node:crypto";
-import { ensureDir, getVideoMetadataById } from "./files.utils";
+import {
+    ensureDir,
+    getNotesMetadataById,
+    getVideoMetadataById,
+} from "./files.utils";
 import { Video } from "../classes/Video";
 import { downloadVideoMetadata } from "./youtubeVideo.utils";
 
@@ -63,4 +67,43 @@ async function deleteNotesMetadata(notesIdList) {
     return true;
 }
 
-export { createNotesMetadata, deleteNotesMetadata };
+async function deleteNotesMetadataById(noteId) {
+    try {
+        const notesMetadataFilePath = path.join(NOTES_DIR, `${noteId}.json`);
+        const notesMetadata: NotesMetadata = await getNotesMetadataById(noteId);
+        if (!notesMetadata) {
+            return false;
+        }
+
+        // get the video id the notes belong to
+        const { videoId } = notesMetadata;
+        const videoMetadata: Video = await getVideoMetadataById(videoId);
+        if (!videoMetadata) {
+            return false;
+        }
+
+        // remove the noteId from the list
+        videoMetadata.notesIdList = videoMetadata.notesIdList.filter(
+            (id) => id !== noteId
+        );
+
+        await downloadVideoMetadata(videoMetadata, videoId);
+
+        // remove the file
+        const notesMetadataExists = await fsp
+            .access(notesMetadataFilePath)
+            .then(() => true)
+            .catch(() => false);
+
+        if (notesMetadataExists) {
+            await fsp.unlink(notesMetadataFilePath);
+            return true;
+        }
+        return false;
+    } catch (e) {
+        console.log("deleteNotesMetadataById | e", e);
+        return false;
+    }
+}
+
+export { createNotesMetadata, deleteNotesMetadata, deleteNotesMetadataById };

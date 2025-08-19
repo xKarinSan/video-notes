@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 
 function CurrentNotesPage() {
     const { notesId } = useParams();
+    const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [currentVideo, setCurrentVideo] = useState<Video>();
     const [currentVideoDate, setCurrentVideoDate] = useState<string>("");
@@ -204,6 +205,25 @@ function CurrentNotesPage() {
         const docId = uuidv4();
         doc.save(`${docId}.pdf`);
     }
+
+    async function deleteCurrentNotes() {
+        if (!confirm("Are you sure you want to delete this notes?")) {
+            return;
+        }
+        try {
+            const deleted = await window.notes.deleteNotesMetadataById(notesId);
+            if (deleted) {
+                alert("Notes deleted successfully.");
+                // redirect
+                navigate("/notes");
+            } else {
+                alert("Failed to delete video.");
+            }
+        } catch (e) {
+            console.error("Delete video error:", e);
+            alert("Error deleting video.");
+        }
+    }
     return (
         <div className="flex flex-col items-center justify-center">
             <div className="flex justify-start m-2 w-full">
@@ -244,7 +264,7 @@ function CurrentNotesPage() {
 
                     <div className="flex flex-wrap my-2">
                         <button
-                            className="btn bg-blue-700 mr-1 w-fit text-white flex items-center gap-2"
+                            className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
                             onClick={captureSnapshot}
                         >
                             {/* Camera icon */}
@@ -270,7 +290,7 @@ function CurrentNotesPage() {
                             Capture Snapshot
                         </button>
                         <button
-                            className="btn bg-blue-700 ml-1 w-fit text-white flex items-center gap-2"
+                            className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
                             onClick={exportToPdf}
                         >
                             {/* Document file icon */}
@@ -294,6 +314,31 @@ function CurrentNotesPage() {
                                 />
                             </svg>
                             Export to PDF
+                        </button>
+                        <button
+                            className={`btn bg-red-700 mx-1  w-fit text-white flex items-center gap-2 ${
+                                isDeleting ? "loading btn-disabled" : ""
+                            }`}
+                            onClick={deleteCurrentNotes}
+                            disabled={isDeleting}
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 
+                   01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0V5a2 2 0 
+                   012-2h2a2 2 0 012 2v2m-7 0h8"
+                                />
+                            </svg>
+                            {isDeleting ? "Deleting..." : "Delete Notes"}
                         </button>
                     </div>
 

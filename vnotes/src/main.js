@@ -25,7 +25,11 @@ import {
     getVideoMetadataById,
     getVideoPathById,
 } from "./utils/files.utils";
-import { createNotesMetadata, deleteNotesMetadata } from "./utils/notes.utils";
+import {
+    createNotesMetadata,
+    deleteNotesMetadata,
+    deleteNotesMetadataById,
+} from "./utils/notes.utils";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -272,10 +276,10 @@ ipcMain.handle("get-all-notes-metadata", async () => {
     }
 });
 
-ipcMain.handle("delete-video-record", async (_,videoId) => {
+ipcMain.handle("delete-video-record", async (_, videoId) => {
     try {
         console.log("delete-video-record");
-        console.log("videoId",videoId)
+        console.log("videoId", videoId);
         if (!videoId) {
             return false;
         }
@@ -295,6 +299,19 @@ ipcMain.handle("delete-video-record", async (_,videoId) => {
         if (!notesDeleted || !recordDeleted) return false;
         store.delete(videoId);
         return true;
+    } catch (e) {
+        console.log("delete-video-record | e", e);
+        false;
+    }
+});
+
+ipcMain.handle("delete-notes-record", async (_, notesId) => {
+    try {
+        if (!notesId) {
+            return false;
+        }
+        // get the metadata and associated video ids
+        return deleteNotesMetadataById(notesId);
     } catch (e) {
         console.log("delete-video-record | e", e);
         false;

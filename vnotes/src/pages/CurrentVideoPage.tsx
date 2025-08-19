@@ -81,6 +81,26 @@ function CurrentVideoPage() {
             setIsDeleting(false);
         }
     }
+
+    async function deleteCurrentNotes(notesId) {
+        if (!confirm("Are you sure you want to delete this notes?")) {
+            return;
+        }
+        try {
+            const deleted = await window.notes.deleteNotesMetadataById(notesId);
+            if (deleted) {
+                setCurrentNotesMetadataList((prev) =>
+                    prev.filter((note) => note.id !== notesId)
+                );
+                alert("Notes deleted successfully.");
+            } else {
+                alert("Failed to delete video.");
+            }
+        } catch (e) {
+            console.error("Delete video error:", e);
+            alert("Error deleting video.");
+        }
+    }
     return (
         <div className="flex flex-col items-center justify-center">
             <div className="flex flejustify-start m-2 w-full">
@@ -150,6 +170,22 @@ function CurrentVideoPage() {
                                     onClick={deleteVideo}
                                     disabled={isDeleting}
                                 >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        strokeWidth={2}
+                                        stroke="currentColor"
+                                        className="w-5 h-5"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 
+                   01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0V5a2 2 0 
+                   012-2h2a2 2 0 012 2v2m-7 0h8"
+                                        />
+                                    </svg>
                                     {isDeleting
                                         ? "Deleting..."
                                         : "Delete Video"}
@@ -220,6 +256,28 @@ function CurrentVideoPage() {
                                                             cx="12"
                                                             cy="12"
                                                             r="3"
+                                                        />
+                                                    </svg>
+                                                </button>{" "}
+                                                <button
+                                                    onClick={() =>
+                                                        deleteCurrentNotes(id)
+                                                    }
+                                                    className="btn btn-black btn-xs btn-square m-2"
+                                                    title="Delete note"
+                                                >
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        strokeWidth={2}
+                                                        stroke="currentColor"
+                                                        className="w-5 h-5"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M6 7h12M9 7V4h6v3m-9 0v12a2 2 0 002 2h6a2 2 0 002-2V7"
                                                         />
                                                     </svg>
                                                 </button>

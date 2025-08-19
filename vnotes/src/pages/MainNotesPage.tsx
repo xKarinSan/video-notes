@@ -25,7 +25,25 @@ function MainNotesPage() {
         })();
     }, []);
 
-    function deleteNoteContent() {}
+    async function deleteCurrentNotes(notesId) {
+        if (!confirm("Are you sure you want to delete this notes?")) {
+            return;
+        }
+        try {
+            const deleted = await window.notes.deleteNotesMetadataById(notesId);
+            if (deleted) {
+                setNotesMetadataList((prev) =>
+                    prev.filter((note) => note.id !== notesId)
+                );
+                alert("Notes deleted successfully.");
+            } else {
+                alert("Failed to delete video.");
+            }
+        } catch (e) {
+            console.error("Delete video error:", e);
+            alert("Error deleting video.");
+        }
+    }
     return (
         <div>
             <h1 className="text-3xl m-5 text-center ">Notes Library</h1>
@@ -83,7 +101,7 @@ function MainNotesPage() {
                                         </button>
                                         <button
                                             onClick={() =>
-                                                deleteNoteContent(id)
+                                                deleteCurrentNotes(id)
                                             }
                                             className="btn btn-black btn-xs btn-square m-2"
                                             title="Delete note"
