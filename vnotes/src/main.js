@@ -1,7 +1,6 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import fsp from "node:fs/promises";
-
 import started from "electron-squirrel-startup";
 import Store from "electron-store";
 import { randomUUID } from "node:crypto";
@@ -29,6 +28,7 @@ import {
     createNotesMetadata,
     deleteNotesMetadata,
     deleteNotesMetadataById,
+    saveNotesMetadata,
 } from "./utils/notes.utils";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -241,6 +241,10 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
         console.log("get-current-notes | e ", e);
         return null;
     }
+});
+
+ipcMain.handle("save-current-notes", async (_, notesId, notesMetadata) => {
+    return await saveNotesMetadata(notesId, notesMetadata);
 });
 
 ipcMain.handle("get-notes-by-videoid", async (_, videoId) => {

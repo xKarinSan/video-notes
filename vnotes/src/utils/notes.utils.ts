@@ -1,9 +1,7 @@
 import path from "node:path";
-import https from "node:https";
 import fsp from "node:fs/promises";
-import fs, { lstat } from "node:fs";
-import { NotesItem, NotesMetadata } from "../classes/Notes";
-import { NOTES_DIR, VIDEOS_NOTES_MAP_DIR } from "../../const";
+import { NotesMetadata } from "../classes/Notes";
+import { NOTES_DIR } from "../../const";
 import { randomUUID } from "node:crypto";
 import {
     ensureDir,
@@ -16,7 +14,6 @@ import { downloadVideoMetadata } from "./youtubeVideo.utils";
 async function createNotesMetadata(videoId) {
     try {
         const notesId = randomUUID();
-
         const notesMetadata: NotesMetadata = {
             id: notesId,
             videoId: videoId,
@@ -40,6 +37,19 @@ async function createNotesMetadata(videoId) {
     } catch (e) {
         console.log("createNotesMetadata | e", e);
         return null;
+    }
+}
+
+async function saveNotesMetadata(notesId, notesMetadata) {
+    try {
+        await ensureDir(notesId);
+        notesMetadata.lastEdited = Date.now();
+        let notesMetadataFilePath = path.join(NOTES_DIR, `${notesId}.json`);
+        let notesMetadataString = JSON.stringify(notesMetadata, null, 2);
+        await fsp.writeFile(notesMetadataFilePath, notesMetadataString);
+        return true;
+    } catch (e) {
+        return false;
     }
 }
 
@@ -106,4 +116,9 @@ async function deleteNotesMetadataById(noteId) {
     }
 }
 
-export { createNotesMetadata, deleteNotesMetadata, deleteNotesMetadataById };
+export {
+    createNotesMetadata,
+    deleteNotesMetadata,
+    deleteNotesMetadataById,
+    saveNotesMetadata,
+};

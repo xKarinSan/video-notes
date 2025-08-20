@@ -10,6 +10,7 @@ function CurrentNotesPage() {
     const { notesId } = useParams();
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isEditingName, setIsEditingName] = useState(false);
     const [currentVideo, setCurrentVideo] = useState<Video>();
     const [currentVideoDate, setCurrentVideoDate] = useState<string>("");
     const [currentVideoFilePath, setCurrentVideoFilePath] =
@@ -109,8 +110,6 @@ function CurrentNotesPage() {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         const dataUrl = canvas.toDataURL("image/png");
-        // const snapshotUrl = `snapshot-${Date.now()}.png`;
-
         const timestampedSnapshot: NotesItem = {
             id: crypto.randomUUID(),
             isSnapshot: true,
@@ -211,18 +210,25 @@ function CurrentNotesPage() {
             return;
         }
         try {
+            setIsDeleting(true);
             const deleted = await window.notes.deleteNotesMetadataById(notesId);
             if (deleted) {
                 alert("Notes deleted successfully.");
                 // redirect
+                setIsDeleting(false);
                 navigate("/notes");
             } else {
                 alert("Failed to delete video.");
             }
         } catch (e) {
             console.error("Delete video error:", e);
+            setIsDeleting(false);
             alert("Error deleting video.");
         }
+    }
+
+    async function saveVideoMetadata() {
+        // mainly for video
     }
     return (
         <div className="flex flex-col items-center justify-center">
@@ -357,9 +363,65 @@ function CurrentNotesPage() {
                 </div>
 
                 <div>
-                    <h1 className="card-title text-2xl font-bold m-5">
-                        {currentNotesMetadata?.title ?? "N/A"}
-                    </h1>
+                    <div className="flex items-center">
+                        {isEditingName ? (
+                            <>
+                                <input
+                                    className="input my-5 ml-5"
+                                    value={currentNotesMetadata?.title}
+                                    onChange={(e) => {
+                                        setCurrentNotesMetadata({
+                                            ...currentNotesMetadata,
+                                            title: e.target.value,
+                                        });
+                                    }}
+                                />
+                                <svg
+                                    onClick={async () => {
+                                        await window.notes.saveCurrentNotes(
+                                            notesId,
+                                            currentNotesMetadata
+                                        );
+                                        setIsEditingName(false);
+                                    }}
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5 text-gray-600 hover:cursor-pointer"
+                                    fill="none"
+                                    viewBox="0 0 12 24"
+                                    stroke="currentColor"
+                                    strokeWidth={1}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM5 13v6h6l8-8-6-6-8 8z"
+                                    />
+                                </svg>
+                            </>
+                        ) : (
+                            <>
+                                <h1 className="card-title text-2xl font-bold my-5 ml-5">
+                                    {currentNotesMetadata?.title ?? "N/A"}
+                                </h1>
+                                <svg
+                                    onClick={() => setIsEditingName(true)}
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5 text-gray-600 hover:cursor-pointer"
+                                    fill="none"
+                                    viewBox="0 0 12 24"
+                                    stroke="currentColor"
+                                    strokeWidth={1}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM5 13v6h6l8-8-6-6-8 8z"
+                                    />
+                                </svg>
+                            </>
+                        )}
+                    </div>
+
                     <div className="overflow-y-auto max-h-[80vh]">
                         {currentNotes.map((note: NotesItem, idx) => {
                             const { timestamp, content, isSnapshot, id } = note;

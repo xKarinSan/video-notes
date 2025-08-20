@@ -44,6 +44,8 @@ contextBridge.exposeInMainWorld("notes", {
             videoPath: blobUrl,
         };
     },
+    saveCurrentNotes: async (notesId, notesMetadata) =>
+        await ipcRenderer.invoke("save-current-notes", notesId, notesMetadata),
     getNotesByVideoId: async (videoId) =>
         await ipcRenderer.invoke("get-notes-by-videoid", videoId),
 
