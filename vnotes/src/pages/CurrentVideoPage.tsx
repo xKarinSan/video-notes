@@ -24,13 +24,11 @@ function CurrentVideoPage() {
                 setIsLoading(false);
                 return;
             }
-            const { metadata, video_path } = currentVideoInfo;
+            const { metadata, video_url } = currentVideoInfo;
             setCurrentVideo(metadata);
-            setCurrentVideoFilePath(video_path);
+            setCurrentVideoFilePath(video_url);
             // also load the notes metadata
             const notesMetadata = await window.notes.getNotesByVideoId(videoId);
-            console.log("notesMetadata", notesMetadata);
-
             if (notesMetadata) {
                 setCurrentNotesMetadataList(notesMetadata);
             }
@@ -41,7 +39,7 @@ function CurrentVideoPage() {
     async function createNewNotes() {
         setIsCreating(true);
 
-        const newNotes = await window.notes
+        await window.notes
             .createNewNotes(videoId)
             .then((newNotes) => {
                 if (newNotes) {

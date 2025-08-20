@@ -197,11 +197,11 @@ ipcMain.handle("get-current-video", async (_, videoId) => {
     }
 
     const buffer = fs.readFileSync(videoFilePath);
-    const base64 = buffer.toString("base64");
-    const dataUrl = `data:video/mp4;base64,${base64}`;
+    // const base64 = buffer.toString("base64");
+    // const dataUrl = `data:video/mp4;base64,${base64}`;
     return {
         metadata: videoMetadata,
-        video_path: dataUrl,
+        buffer: buffer,
     };
 });
 
@@ -232,12 +232,10 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
         }
 
         const buffer = fs.readFileSync(videoFilePath);
-        const base64 = buffer.toString("base64");
-        const dataUrl = `data:video/mp4;base64,${base64}`;
         return {
             videoMetadata: videoMetadata,
             notesMetadata: currentNotesMetadata,
-            videoPath: dataUrl,
+            buffer: buffer,
         };
     } catch (e) {
         console.log("get-current-notes | e ", e);
@@ -305,13 +303,13 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
     }
 });
 
-ipcMain.handle("delete-notes-record", async (_, notesId) => {
+ipcMain.handle("delete-notes-record", async (_, noteId) => {
     try {
-        if (!notesId) {
+        if (!noteId) {
             return false;
         }
         // get the metadata and associated video ids
-        return deleteNotesMetadataById(notesId);
+        return deleteNotesMetadataById(noteId);
     } catch (e) {
         console.log("delete-video-record | e", e);
         false;
