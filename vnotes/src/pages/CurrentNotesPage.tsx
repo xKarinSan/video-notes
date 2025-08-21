@@ -53,6 +53,22 @@ function CurrentNotesPage() {
         })();
     }, []);
 
+    useEffect(() => {
+        return () => {
+            if (currentNotesMetadata && currentNotes.length > 0) {
+                window.notes
+                    .saveCurrentNotes(
+                        notesId,
+                        currentNotesMetadata,
+                        currentNotes
+                    )
+                    .catch((err) => {
+                        console.error("Auto-save on exit failed:", err);
+                    });
+            }
+        };
+    }, [notesId, currentNotesMetadata, currentNotes]);
+
     function startEditing(note: NotesItem) {
         setEditingNoteId(note.id);
         setEditContent(note.content);
@@ -237,18 +253,8 @@ function CurrentNotesPage() {
             <div className="flex justify-start m-2 w-full">
                 <button
                     className="btn m-1 btn-sm w-fit"
-                    onClick={async () => {
-                        await window.notes
-                            .saveCurrentNotes(
-                                notesId,
-                                currentNotesMetadata,
-                                currentNotes
-                            )
-                            .then((res) => {
-                                if (res) {
-                                    navigate("/notes");
-                                }
-                            });
+                    onClick={()=>{
+                        navigate("/notes");
                     }}
                 >
                     ← Back

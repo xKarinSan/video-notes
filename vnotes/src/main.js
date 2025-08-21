@@ -198,8 +198,6 @@ ipcMain.handle("get-current-video", async (_, videoId) => {
     }
 
     const buffer = fs.readFileSync(videoFilePath);
-    // const base64 = buffer.toString("base64");
-    // const dataUrl = `data:video/mp4;base64,${base64}`;
     return {
         metadata: videoMetadata,
         buffer: buffer,
@@ -209,6 +207,14 @@ ipcMain.handle("get-current-video", async (_, videoId) => {
 ipcMain.handle("create-new-notes", async (_, videoId) => {
     try {
         const newNotes = await createNotesMetadata(videoId);
+        if (!newNotes) {
+            return null;
+        }
+        const { id } = newNotes;
+        const newNotesContents = await writeNotesItem(id, []);
+        if (!newNotesContents) {
+            return null;
+        }
         return newNotes;
     } catch {
         return null;
@@ -218,28 +224,34 @@ ipcMain.handle("create-new-notes", async (_, videoId) => {
 ipcMain.handle("get-current-notes", async (_, notesId) => {
     try {
         const currentNotesMetadata = await getNotesMetadataById(notesId);
+        console.log("currentNotesMetadata", currentNotesMetadata);
         if (!currentNotesMetadata) {
             return null;
         }
         const currentNotes = await readNotesItem(notesId);
-        {
-            if (!currentNotes) {
-                return null;
-            }
+        console.log("currentNotes", currentNotes);
+
+        if (!currentNotes) {
+            return null;
         }
 
         const { videoId } = currentNotesMetadata;
         const videoMetadata = await getVideoMetadataById(videoId);
+        console.log("videoMetadata", videoMetadata);
+
         if (!videoMetadata) {
             return null;
         }
 
         const videoFilePath = await getVideoPathById(videoId);
+        console.log("videoMetadata", videoMetadata);
+
         if (!(videoMetadata && videoFilePath && currentNotes)) {
             return null;
         }
 
         const buffer = fs.readFileSync(videoFilePath);
+        console.log();
         return {
             videoMetadata: videoMetadata,
             notesMetadata: currentNotesMetadata,

@@ -2,9 +2,11 @@ import { NotesItem } from "../classes/Notes";
 import path from "node:path";
 import { NOTES_ITEM_DIR } from "../../const";
 import fsp from "node:fs/promises";
+import { ensureDir } from "./files.utils";
 
 async function writeNotesItem(notesId: string, notes: NotesItem[]) {
     try {
+        await ensureDir(NOTES_ITEM_DIR);
         const notesItemFilePath = path.join(NOTES_ITEM_DIR, `${notesId}.json`);
         const notesItemString = JSON.stringify(notes, null, 2);
         await fsp.writeFile(notesItemFilePath, notesItemString);
