@@ -32,7 +32,8 @@ contextBridge.exposeInMainWorld("notes", {
         const result = await ipcRenderer.invoke("get-current-notes", notesId);
         if (!result) return null;
 
-        const { videoMetadata, notesMetadata, buffer } = result;
+        const { videoMetadata, notesMetadata, currentNotesData, buffer } =
+            result;
 
         // Read file as buffer
         const uint8Array = new Uint8Array(buffer);
@@ -41,6 +42,7 @@ contextBridge.exposeInMainWorld("notes", {
         return {
             videoMetadata,
             notesMetadata,
+            currentNotesData,
             videoPath: blobUrl,
         };
     },

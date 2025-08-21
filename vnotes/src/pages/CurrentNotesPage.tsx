@@ -35,14 +35,19 @@ function CurrentNotesPage() {
                         setIsLoading(false);
                         return;
                     }
-                    const { videoMetadata, notesMetadata, videoPath } =
-                        currentNotesInfo;
+                    const {
+                        videoMetadata,
+                        notesMetadata,
+                        currentNotesData,
+                        videoPath,
+                    } = currentNotesInfo;
                     setCurrentVideoDate(
                         new Date(videoMetadata.dateUploaded).toLocaleString()
                     );
                     setCurrentVideo(videoMetadata);
                     setCurrentVideoFilePath(videoPath);
                     setCurrentNotesMetadata(notesMetadata);
+                    setCurrentNotes(currentNotesData);
                     setIsLoading(false);
                 });
         })();

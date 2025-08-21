@@ -30,7 +30,7 @@ import {
     deleteNotesMetadataById,
     saveNotesMetadata,
 } from "./utils/notes.utils";
-import { writeNotesItem } from "./utils/notesItems.utils";
+import { readNotesItem, writeNotesItem } from "./utils/notesItems.utils";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -221,6 +221,13 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
         if (!currentNotesMetadata) {
             return null;
         }
+        const currentNotes = await readNotesItem(notesId);
+        {
+            if (!currentNotes) {
+                return null;
+            }
+        }
+
         const { videoId } = currentNotesMetadata;
         const videoMetadata = await getVideoMetadataById(videoId);
         if (!videoMetadata) {
@@ -228,7 +235,7 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
         }
 
         const videoFilePath = await getVideoPathById(videoId);
-        if (!(videoMetadata && videoFilePath)) {
+        if (!(videoMetadata && videoFilePath && currentNotes)) {
             return null;
         }
 
@@ -236,6 +243,7 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
         return {
             videoMetadata: videoMetadata,
             notesMetadata: currentNotesMetadata,
+            currentNotesData: currentNotes,
             buffer: buffer,
         };
     } catch (e) {
