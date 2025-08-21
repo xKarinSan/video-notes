@@ -30,7 +30,12 @@ import {
     deleteNotesMetadataById,
     saveNotesMetadata,
 } from "./utils/notes.utils";
-import { readNotesItem, writeNotesItem } from "./utils/notesItems.utils";
+import {
+    deleteNotesFromList,
+    deleteNotesItemById,
+    readNotesItem,
+    writeNotesItem,
+} from "./utils/notesItems.utils";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -110,7 +115,7 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
         await ensureDir(METADATA_DIR);
         await ensureDir(VIDEOS_DIR);
 
-        let videoId = store.get(youtubeVideoId);
+        let videoId = store.get("yt/" + youtubeVideoId);
         let videoMetadata = {};
         let videoMetadataFilePath = "";
 
@@ -183,7 +188,8 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             }
             return null;
         }
-        store.set(youtubeVideoId, videoId);
+        store.set("yt/" + youtubeVideoId, videoId);
+        store.set("vd/" + videoId, youtubeVideoId);
         return videoMetadata;
     } catch {
         return null;
@@ -324,8 +330,6 @@ ipcMain.handle("get-all-notes-metadata", async () => {
 
 ipcMain.handle("delete-video-record", async (_, videoId) => {
     try {
-        console.log("delete-video-record");
-        console.log("videoId", videoId);
         if (!videoId) {
             return false;
         }
@@ -334,16 +338,23 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
         if (!videoMetadata) {
             return false;
         }
-        console.log("videoMetadata", videoMetadata);
         const { notesIdList } = videoMetadata;
-        console.log("notesIdList", notesIdList);
+        const [notesContentsDeleted, notesDeleted, recordDeleted] =
+            await Promise.all([
+                deleteNotesFromList(notesIdList),
+                deleteNotesMetadata(notesIdList),
+                deleteVideoRecord(videoId),
+            ]);
+        console.log("notesContentsDeleted", notesContentsDeleted);
+        console.log("notesDeleted", notesDeleted);
+        console.log("recordDeleted", recordDeleted);
+        if (!notesDeleted || !recordDeleted || !notesContentsDeleted)
+            return false;
 
-        const [notesDeleted, recordDeleted] = await Promise.all([
-            deleteNotesMetadata(notesIdList),
-            deleteVideoRecord(videoId),
-        ]);
-        if (!notesDeleted || !recordDeleted) return false;
-        store.delete(videoId);
+        const ytId = store.get("vd/" + videoId);
+        store.delete("yt/" + ytId);
+        store.delete("vd/" + videoId);
+
         return true;
     } catch (e) {
         console.log("delete-video-record | e", e);
@@ -356,28 +367,19 @@ ipcMain.handle("delete-notes-record", async (_, noteId) => {
         if (!noteId) {
             return false;
         }
-        // get the metadata and associated video ids
-        return deleteNotesMetadataById(noteId);
+        const [deletedNotesMetadata, deletedNotesItems] = await Promise.all([
+            deleteNotesMetadataById(noteId),
+            deleteNotesItemById(noteId),
+        ]);
+        if (!deletedNotesMetadata || !deletedNotesItems) {
+            return false;
+        }
+        return true;
     } catch (e) {
         console.log("delete-video-record | e", e);
         false;
     }
 });
-
-// ipcMain.handle("write-current-notes", async (_, notes, noteId) => {
-//     try {
-//         if (!noteId) {
-//             return false;
-//         }
-//         // get the metadata and associated video ids
-//         // save the notes id too
-//         const written = await writeNotesItem(notes, noteId);
-//         return written;
-//     } catch (e) {
-//         console.log("delete-video-record | e", e);
-//         false;
-//     }
-// });
 
 // APP LIFECYCLE
 // This method will be called when Electron has finished

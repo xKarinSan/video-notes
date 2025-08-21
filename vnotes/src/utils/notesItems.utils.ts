@@ -37,4 +37,41 @@ async function readNotesItem(notesId) {
     }
 }
 
-export { writeNotesItem, readNotesItem };
+async function deleteNotesFromList(notesIdList) {
+    try {
+        await ensureDir(NOTES_ITEM_DIR);
+        for (const notesId of notesIdList) {
+            const notesItemsFilePath = path.join(
+                NOTES_ITEM_DIR,
+                `${notesId}.json`
+            );
+            const notesItemsExists = await fsp
+                .access(notesItemsFilePath)
+                .then(() => true)
+                .catch(() => false);
+
+            if (notesItemsExists) {
+                await fsp.unlink(notesItemsFilePath);
+            }
+        }
+    } catch (e) {
+        console.log("deleteNotesMetadata | e", e);
+        return false;
+    }
+    return true;
+}
+
+async function deleteNotesItemById(notesId) {
+    try {
+        const notesItemFilePath = path.join(NOTES_ITEM_DIR, `${notesId}.json`);
+        await fsp.unlink(notesItemFilePath);
+        return true;
+    } catch (e) {
+        console.error("deleteNotesItem | e", e);
+        return false;
+    }
+}
+
+
+
+export { writeNotesItem, readNotesItem, deleteNotesItemById, deleteNotesFromList };
