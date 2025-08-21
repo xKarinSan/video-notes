@@ -244,9 +244,16 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
         }
 
         const videoFilePath = await getVideoPathById(videoId);
-        console.log("videoMetadata", videoMetadata);
+        console.log("videoFilePath", videoFilePath);
 
-        if (!(videoMetadata && videoFilePath && currentNotes)) {
+        if (
+            !(
+                videoMetadata &&
+                videoFilePath &&
+                currentNotes &&
+                currentNotesMetadata
+            )
+        ) {
             return null;
         }
 
@@ -268,10 +275,6 @@ ipcMain.handle(
     "save-current-notes",
     async (_, notesId, notesMetadata, notesDetails) => {
         try {
-            await Promise.all([
-                ensureDir(NOTES_DIR),
-                ensureDir(NOTES_ITEM_DIR),
-            ]);
             const [savedNotes, savedNotesDetails] = await Promise.all([
                 saveNotesMetadata(notesId, notesMetadata),
                 writeNotesItem(notesId, notesDetails),

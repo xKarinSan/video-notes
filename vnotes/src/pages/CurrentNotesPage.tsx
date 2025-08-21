@@ -55,7 +55,7 @@ function CurrentNotesPage() {
 
     useEffect(() => {
         return () => {
-            if (currentNotesMetadata && currentNotes.length > 0) {
+            if (currentNotesMetadata && currentNotes) {
                 window.notes
                     .saveCurrentNotes(
                         notesId,
@@ -253,7 +253,7 @@ function CurrentNotesPage() {
             <div className="flex justify-start m-2 w-full">
                 <button
                     className="btn m-1 btn-sm w-fit"
-                    onClick={()=>{
+                    onClick={() => {
                         navigate("/notes");
                     }}
                 >

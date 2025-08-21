@@ -42,7 +42,6 @@ async function createNotesMetadata(videoId) {
 
 async function saveNotesMetadata(notesId, notesMetadata) {
     try {
-        await ensureDir(notesId);
         notesMetadata.lastEdited = Date.now();
         let notesMetadataFilePath = path.join(NOTES_DIR, `${notesId}.json`);
         let notesMetadataString = JSON.stringify(notesMetadata, null, 2);

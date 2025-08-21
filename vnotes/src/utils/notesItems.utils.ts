@@ -8,6 +8,7 @@ async function writeNotesItem(notesId: string, notes: NotesItem[]) {
     try {
         await ensureDir(NOTES_ITEM_DIR);
         const notesItemFilePath = path.join(NOTES_ITEM_DIR, `${notesId}.json`);
+        console.log("notesItemFilePath", notesItemFilePath);
         const notesItemString = JSON.stringify(notes, null, 2);
         await fsp.writeFile(notesItemFilePath, notesItemString);
         return true;
