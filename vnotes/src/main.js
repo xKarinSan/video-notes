@@ -15,7 +15,7 @@ import {
     deleteVideoFile,
     deleteVideoRecord,
 } from "./utils/youtubeVideo.utils";
-import { METADATA_DIR, VIDEOS_DIR } from "../const";
+import { METADATA_DIR, NOTES_DIR, NOTES_ITEM_DIR, VIDEOS_DIR } from "../const";
 import {
     ensureDir,
     fileExists,
@@ -30,6 +30,7 @@ import {
     deleteNotesMetadataById,
     saveNotesMetadata,
 } from "./utils/notes.utils";
+import { writeNotesItem } from "./utils/notesItems.utils";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -243,9 +244,29 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
     }
 });
 
-ipcMain.handle("save-current-notes", async (_, notesId, notesMetadata) => {
-    return await saveNotesMetadata(notesId, notesMetadata);
-});
+ipcMain.handle(
+    "save-current-notes",
+    async (_, notesId, notesMetadata, notesDetails) => {
+        try {
+            await Promise.all([
+                ensureDir(NOTES_DIR),
+                ensureDir(NOTES_ITEM_DIR),
+            ]);
+            const [savedNotes, savedNotesDetails] = await Promise.all([
+                saveNotesMetadata(notesId, notesMetadata),
+                writeNotesItem(notesId, notesDetails),
+            ]);
+
+            if (!(savedNotes && savedNotesDetails)) {
+                return false;
+            }
+            return true;
+        } catch (e) {
+            console.log("save-current-notes | e", e);
+            return null;
+        }
+    }
+);
 
 ipcMain.handle("get-notes-by-videoid", async (_, videoId) => {
     try {
@@ -319,6 +340,21 @@ ipcMain.handle("delete-notes-record", async (_, noteId) => {
         false;
     }
 });
+
+// ipcMain.handle("write-current-notes", async (_, notes, noteId) => {
+//     try {
+//         if (!noteId) {
+//             return false;
+//         }
+//         // get the metadata and associated video ids
+//         // save the notes id too
+//         const written = await writeNotesItem(notes, noteId);
+//         return written;
+//     } catch (e) {
+//         console.log("delete-video-record | e", e);
+//         false;
+//     }
+// });
 
 // APP LIFECYCLE
 // This method will be called when Electron has finished

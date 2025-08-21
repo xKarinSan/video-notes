@@ -44,8 +44,13 @@ contextBridge.exposeInMainWorld("notes", {
             videoPath: blobUrl,
         };
     },
-    saveCurrentNotes: async (notesId, notesMetadata) =>
-        await ipcRenderer.invoke("save-current-notes", notesId, notesMetadata),
+    saveCurrentNotes: async (notesId, notesMetadata, notesDetails) =>
+        await ipcRenderer.invoke(
+            "save-current-notes",
+            notesId,
+            notesMetadata,
+            notesDetails
+        ),
     getNotesByVideoId: async (videoId) =>
         await ipcRenderer.invoke("get-notes-by-videoid", videoId),
 
@@ -53,4 +58,7 @@ contextBridge.exposeInMainWorld("notes", {
         await ipcRenderer.invoke("get-all-notes-metadata"),
     deleteNotesMetadataById: async (notesId) =>
         await ipcRenderer.invoke("delete-notes-record", notesId),
+
+    // writeNotes: async (notes, noteId) =>
+    //     await ipcRenderer.invoke("write-current-notes", notes, noteId),
 });

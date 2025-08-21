@@ -227,15 +227,24 @@ function CurrentNotesPage() {
         }
     }
 
-    async function saveVideoMetadata() {
-        // mainly for video
-    }
     return (
         <div className="flex flex-col items-center justify-center">
             <div className="flex justify-start m-2 w-full">
                 <button
                     className="btn m-1 btn-sm w-fit"
-                    onClick={() => navigate("/notes")}
+                    onClick={async () => {
+                        await window.notes
+                            .saveCurrentNotes(
+                                notesId,
+                                currentNotesMetadata,
+                                currentNotes
+                            )
+                            .then((res) => {
+                                if (res) {
+                                    navigate("/notes");
+                                }
+                            });
+                    }}
                 >
                     ← Back
                 </button>
@@ -380,7 +389,8 @@ function CurrentNotesPage() {
                                     onClick={async () => {
                                         await window.notes.saveCurrentNotes(
                                             notesId,
-                                            currentNotesMetadata
+                                            currentNotesMetadata,
+                                            currentNotes
                                         );
                                         setIsEditingName(false);
                                     }}
