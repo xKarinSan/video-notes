@@ -15,7 +15,11 @@ import {
     deleteVideoFile,
     deleteVideoRecord,
 } from "./utils/youtubeVideo.utils";
-import { METADATA_DIR, NOTES_DIR, NOTES_ITEM_DIR, VIDEOS_DIR } from "../const";
+import {
+    METADATA_DIR,
+    SNAPSHOTS_DIR,
+    VIDEOS_DIR,
+} from "../const";
 import {
     ensureDir,
     fileExists,
@@ -33,6 +37,8 @@ import {
 import {
     deleteNotesFromList,
     deleteNotesItemById,
+    deleteSnapshotFromNote,
+    deleteSnapshotsByNotesId,
     getSnapshotBufferMap,
     readNotesItem,
     syncSnapshots,
@@ -219,6 +225,8 @@ ipcMain.handle("create-new-notes", async (_, videoId) => {
             return null;
         }
         const { id } = newNotes;
+        const snapshotPath = path.join(SNAPSHOTS_DIR, id);
+        await ensureDir(snapshotPath);
         const newNotesContents = await writeNotesItem(id, []);
         if (!newNotesContents) {
             return null;
@@ -363,16 +371,27 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
             return false;
         }
         const { notesIdList } = videoMetadata;
-        const [notesContentsDeleted, notesDeleted, recordDeleted] =
-            await Promise.all([
-                deleteNotesFromList(notesIdList),
-                deleteNotesMetadata(notesIdList),
-                deleteVideoRecord(videoId),
-            ]);
+        const [
+            notesContentsDeleted,
+            notesDeleted,
+            recordDeleted,
+            snapshotsDeleted,
+        ] = await Promise.all([
+            deleteNotesFromList(notesIdList),
+            deleteNotesMetadata(notesIdList),
+            deleteVideoRecord(videoId),
+            deleteSnapshotFromNote(notesIdList),
+        ]);
         console.log("notesContentsDeleted", notesContentsDeleted);
         console.log("notesDeleted", notesDeleted);
         console.log("recordDeleted", recordDeleted);
-        if (!notesDeleted || !recordDeleted || !notesContentsDeleted)
+        console.log("snapshotsDeleted", snapshotsDeleted);
+        if (
+            !notesDeleted ||
+            !recordDeleted ||
+            !notesContentsDeleted ||
+            !snapshotsDeleted
+        )
             return false;
 
         const ytId = store.get("vd/" + videoId);
@@ -391,11 +410,15 @@ ipcMain.handle("delete-notes-record", async (_, noteId) => {
         if (!noteId) {
             return false;
         }
-        const [deletedNotesMetadata, deletedNotesItems] = await Promise.all([
-            deleteNotesMetadataById(noteId),
-            deleteNotesItemById(noteId),
-        ]);
-        if (!deletedNotesMetadata || !deletedNotesItems) {
+        const [deletedNotesMetadata, deletedNotesItems, deleteNotesSnapshots] =
+            await Promise.all([
+                deleteNotesMetadataById(noteId),
+                deleteNotesItemById(noteId),
+                deleteSnapshotsByNotesId(noteId),
+            ]);
+        if (
+            !(deletedNotesMetadata && deletedNotesItems && deleteNotesSnapshots)
+        ) {
             return false;
         }
         return true;

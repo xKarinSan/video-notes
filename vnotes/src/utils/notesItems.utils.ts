@@ -58,11 +58,11 @@ async function deleteNotesFromList(notesIdList) {
                 await fsp.unlink(notesItemsFilePath);
             }
         }
+        return true;
     } catch (e) {
         console.log("deleteNotesMetadata | e", e);
         return false;
     }
-    return true;
 }
 
 async function deleteNotesItemById(notesId) {
@@ -154,6 +154,46 @@ async function getSnapshotBufferMap(notesId) {
     }
 }
 
+async function deleteSnapshotsByNotesId(notesId) {
+    try {
+        const snapshotsFilePath = path.join(SNAPSHOTS_DIR, notesId);
+        console.log("snapshotsFilePath", snapshotsFilePath);
+        const snapshotsExist = await fileExists(snapshotsFilePath);
+
+        if (snapshotsExist) {
+            // await fsp.unlink(snapshotsFilePath);
+            await fsp.rm(snapshotsFilePath, { recursive: true, force: true });
+            return true;
+        }
+        return true;
+    } catch (e) {
+        console.log("e", e);
+        return false;
+    }
+}
+
+async function deleteSnapshotFromNote(notesIdList) {
+    try {
+        await ensureDir(SNAPSHOTS_DIR);
+        for (const notesId of notesIdList) {
+            console.log("deleteSnapshotFromNote | notesId: ",notesId)
+            const snapshotsFilePath = path.join(SNAPSHOTS_DIR, notesId);
+            const snapshotsExist = await fileExists(snapshotsFilePath);
+
+            if (snapshotsExist) {
+                await fsp.rm(snapshotsFilePath, {
+                    recursive: true,
+                    force: true,
+                });
+            }
+        }
+        return true;
+    } catch (e) {
+        console.log("deleteSnapshotFromNote | e", e);
+        return false;
+    }
+}
+
 export {
     writeNotesItem,
     readNotesItem,
@@ -162,4 +202,6 @@ export {
     syncSnapshots,
     getSnapshotBufferMap,
     dictToBase64Map,
+    deleteSnapshotsByNotesId,
+    deleteSnapshotFromNote,
 };
