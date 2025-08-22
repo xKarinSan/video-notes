@@ -2,6 +2,21 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 const { contextBridge, ipcRenderer } = require("electron");
 
+async function dictToBufferMap(dict) {
+    const entries = await Promise.all(
+        Object.entries(dict).map(async ([id, url]) => {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const arrayBuffer = await blob.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer); // This is your binary data
+            return [id, buffer];
+        })
+    );
+    const res = Object.fromEntries(entries);
+    console.log("dictToBufferMap | entries ", res);
+    return res;
+}
+
 contextBridge.exposeInMainWorld("api", {
     listMetadata: async () => await ipcRenderer.invoke("get-all-metadata"),
     getVideodata: async (videoUrl) =>
@@ -46,13 +61,23 @@ contextBridge.exposeInMainWorld("notes", {
             videoPath: blobUrl,
         };
     },
-    saveCurrentNotes: async (notesId, notesMetadata, notesDetails) =>
-        await ipcRenderer.invoke(
+    saveCurrentNotes: async (
+        notesId,
+        notesMetadata,
+        notesDetails,
+        snapshotIdDict
+    ) => {
+        console.log("snapshotIdDict", snapshotIdDict);
+        const bufferDict = await dictToBufferMap(snapshotIdDict);
+        return await ipcRenderer.invoke(
             "save-current-notes",
             notesId,
             notesMetadata,
-            notesDetails
-        ),
+            notesDetails,
+            bufferDict
+        );
+    },
+
     getNotesByVideoId: async (videoId) =>
         await ipcRenderer.invoke("get-notes-by-videoid", videoId),
 

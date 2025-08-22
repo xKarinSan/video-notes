@@ -1,14 +1,18 @@
 import { NotesItem } from "../classes/Notes";
 import path from "node:path";
-import { NOTES_ITEM_DIR } from "../../const";
+import { NOTES_ITEM_DIR, SNAPSHOTS_DIR } from "../../const";
 import fsp from "node:fs/promises";
-import { ensureDir } from "./files.utils";
+import { ensureDir, fileExists } from "./files.utils";
 
 async function writeNotesItem(notesId: string, notes: NotesItem[]) {
     try {
         await ensureDir(NOTES_ITEM_DIR);
         const notesItemFilePath = path.join(NOTES_ITEM_DIR, `${notesId}.json`);
         console.log("notesItemFilePath", notesItemFilePath);
+        notes.map((note: NotesItem) => {
+            note.content = note.snapshotId ?? note.content;
+        });
+
         const notesItemString = JSON.stringify(notes, null, 2);
         await fsp.writeFile(notesItemFilePath, notesItemString);
         return true;
@@ -72,6 +76,68 @@ async function deleteNotesItemById(notesId) {
     }
 }
 
+async function syncSnapshots(notesId, notesDetails, bufferDict) {
+    try {
+        const currSnapshotsPath = path.join(SNAPSHOTS_DIR, notesId);
+        ensureDir(currSnapshotsPath);
+        // find all that is matching (union)
+        // find the ones that are missing in note
+        let oldSnapshotIds = new Set();
+        notesDetails.map(async (note: NotesItem) => {
+            if (note.snapshotId) {
+                const { snapshotId } = note;
+                // if old not inside dict, throw it away
+                if (!(snapshotId in bufferDict)) {
+                    // delete
+                    const snapshotPath = path.join(
+                        currSnapshotsPath,
+                        `${snapshotId}.jpg`
+                    );
+                    const snapshotExists = await fileExists(snapshotPath);
+                    if (snapshotExists) {
+                        await fsp.unlink(snapshotPath);
+                    }
+                } else {
+                    oldSnapshotIds.add(snapshotId);
+                }
+            }
+        });
 
+        // save the new ones
+        const saves = [];
+        for (const [id, buffer] of Object.entries(bufferDict)) {
+            if (oldSnapshotIds.has(id)) continue;
 
-export { writeNotesItem, readNotesItem, deleteNotesItemById, deleteNotesFromList };
+            const snapshotPath = path.join(currSnapshotsPath, `${id}.jpg`);
+            saves.push(fsp.writeFile(snapshotPath, buffer));
+        }
+
+        await Promise.all(saves);
+        return true;
+    } catch (e) {
+        console.error("syncSnapshots | e", e);
+        return false;
+    }
+}
+
+async function dictToBase64Map(dict) {
+    const entries = await Promise.all(
+        Object.entries(dict).map(async ([id, url]) => {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const arrayBuffer = await blob.arrayBuffer();
+            const base64 = Buffer.from(arrayBuffer).toString("base64");
+            return [id, { base64, mime: blob.type }];
+        })
+    );
+    return Object.fromEntries(entries);
+}
+
+export {
+    writeNotesItem,
+    readNotesItem,
+    deleteNotesItemById,
+    deleteNotesFromList,
+    syncSnapshots,
+    dictToBase64Map,
+};

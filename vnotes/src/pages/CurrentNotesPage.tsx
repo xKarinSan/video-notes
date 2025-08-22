@@ -22,6 +22,9 @@ function CurrentNotesPage() {
 
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
     const [editContent, setEditContent] = useState<string>("");
+    // key: snapshot_id
+    // value: generated URL
+    const [snapshotIdDict, setSnapshotIdDict] = useState({});
 
     const videoRef = useRef();
     const navigate = useNavigate();
@@ -60,7 +63,8 @@ function CurrentNotesPage() {
                     .saveCurrentNotes(
                         notesId,
                         currentNotesMetadata,
-                        currentNotes
+                        currentNotes,
+                        snapshotIdDict
                     )
                     .catch((err) => {
                         console.error("Auto-save on exit failed:", err);
@@ -112,7 +116,16 @@ function CurrentNotesPage() {
     }
 
     function deleteNoteContent(id) {
-        setCurrentNotes(currentNotes.filter((note) => note.id !== id));
+        const currentNote = currentNotes.find((note) => note.id === id);
+        if (currentNote) {
+            const snapshotId = currentNote.snapshotId;
+            if (snapshotId) {
+                const updatedSnapshotDict = { ...snapshotIdDict };
+                delete updatedSnapshotDict[snapshotId];
+                setSnapshotIdDict(updatedSnapshotDict);
+            }
+            setCurrentNotes(currentNotes.filter((note) => note.id !== id));
+        }
     }
 
     async function captureSnapshot() {
@@ -129,13 +142,16 @@ function CurrentNotesPage() {
         if (!ctx) return;
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
+        const snapshotId = crypto.randomUUID();
         const dataUrl = canvas.toDataURL("image/png");
+        setSnapshotIdDict({ ...snapshotIdDict, [snapshotId]: dataUrl });
+
         const timestampedSnapshot: NotesItem = {
             id: crypto.randomUUID(),
             isSnapshot: true,
             content: dataUrl,
             timestamp: timestamp,
+            snapshotId: snapshotId,
         };
 
         setCurrentNotes(
@@ -143,6 +159,7 @@ function CurrentNotesPage() {
                 (a, b) => a.timestamp - b.timestamp
             )
         );
+        // console.log("snapshotIdDict", snapshotIdDict);
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         canvas.width = 0;
@@ -401,7 +418,8 @@ function CurrentNotesPage() {
                                         await window.notes.saveCurrentNotes(
                                             notesId,
                                             currentNotesMetadata,
-                                            currentNotes
+                                            currentNotes,
+                                            snapshotIdDict
                                         );
                                         setIsEditingName(false);
                                     }}

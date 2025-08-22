@@ -6,6 +6,7 @@ const VIDEOS_DIR = path.join(USER_DATA_BASE, "videos");
 const VIDEOS_NOTES_MAP_DIR = path.join(USER_DATA_BASE, "video_notes_map");
 const NOTES_DIR = path.join(USER_DATA_BASE, "notes");
 const NOTES_ITEM_DIR = path.join(USER_DATA_BASE, "notes_items");
+const SNAPSHOTS_DIR = path.join(USER_DATA_BASE, "snapshots");
 
 export {
     USER_DATA_BASE,
@@ -14,4 +15,5 @@ export {
     NOTES_DIR,
     VIDEOS_NOTES_MAP_DIR,
     NOTES_ITEM_DIR,
+    SNAPSHOTS_DIR,
 };

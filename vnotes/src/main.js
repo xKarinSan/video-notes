@@ -34,6 +34,7 @@ import {
     deleteNotesFromList,
     deleteNotesItemById,
     readNotesItem,
+    syncSnapshots,
     writeNotesItem,
 } from "./utils/notesItems.utils";
 
@@ -279,8 +280,20 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
 
 ipcMain.handle(
     "save-current-notes",
-    async (_, notesId, notesMetadata, notesDetails) => {
+    async (_, notesId, notesMetadata, notesDetails, bufferDict) => {
         try {
+            const previousNotes = await readNotesItem(notesId);
+            if (!previousNotes) {
+                return false;
+            }
+            const syncedSnapshots = await syncSnapshots(
+                notesId,
+                previousNotes,
+                bufferDict
+            );
+            if (!syncedSnapshots) {
+                return false;
+            }
             const [savedNotes, savedNotesDetails] = await Promise.all([
                 saveNotesMetadata(notesId, notesMetadata),
                 writeNotesItem(notesId, notesDetails),
