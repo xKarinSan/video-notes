@@ -16,6 +16,17 @@ async function dictToBufferMap(dict) {
     console.log("dictToBufferMap | entries ", res);
     return res;
 }
+function bufferDictToUrlMap(dict) {
+    const entries = Object.entries(dict).map(([id, bytes]) => {
+        const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+        const blob = new Blob([u8], { type: "image/jpeg" });
+        const blobUrl = URL.createObjectURL(blob);
+        return [id, blobUrl];
+    });
+    const res = Object.fromEntries(entries);
+    console.log("bufferDictToUrlMap | res",res)
+    return res;
+}
 
 contextBridge.exposeInMainWorld("api", {
     listMetadata: async () => await ipcRenderer.invoke("get-all-metadata"),
@@ -26,8 +37,6 @@ contextBridge.exposeInMainWorld("api", {
         if (!result) return null;
 
         const { metadata, buffer } = result;
-
-        // Read file as buffer
         const uint8Array = new Uint8Array(buffer);
         const blob = new Blob([uint8Array], { type: "video/mp4" });
         const blobUrl = URL.createObjectURL(blob);
@@ -47,18 +56,32 @@ contextBridge.exposeInMainWorld("notes", {
         const result = await ipcRenderer.invoke("get-current-notes", notesId);
         if (!result) return null;
 
-        const { videoMetadata, notesMetadata, currentNotesData, buffer } =
-            result;
+        const {
+            videoMetadata,
+            notesMetadata,
+            currentNotesData,
+            snapshotBuffer, // id: buffer
+            buffer, // video buffer
+        } = result;
 
-        // Read file as buffer
-        const uint8Array = new Uint8Array(buffer);
-        const blob = new Blob([uint8Array], { type: "video/mp4" });
-        const blobUrl = URL.createObjectURL(blob);
+        const urlDict = bufferDictToUrlMap(snapshotBuffer);
+        const videoBlob = new Blob([new Uint8Array(buffer)], {
+            type: "video/mp4",
+        });
+        const videoBlobUrl = URL.createObjectURL(videoBlob);
+        currentNotesData.forEach((noteItem) => {
+            const snapshotId = noteItem.snapshotId ?? "";
+            if (snapshotId && urlDict[snapshotId]) {
+                noteItem.content = urlDict[snapshotId]; // temporary blob URL
+            }
+        });
+
         return {
             videoMetadata,
             notesMetadata,
             currentNotesData,
-            videoPath: blobUrl,
+            videoPath: videoBlobUrl,
+            urlDict,
         };
     },
     saveCurrentNotes: async (
@@ -86,6 +109,4 @@ contextBridge.exposeInMainWorld("notes", {
     deleteNotesMetadataById: async (notesId) =>
         await ipcRenderer.invoke("delete-notes-record", notesId),
 
-    // writeNotes: async (notes, noteId) =>
-    //     await ipcRenderer.invoke("write-current-notes", notes, noteId),
 });

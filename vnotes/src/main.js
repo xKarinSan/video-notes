@@ -33,6 +33,7 @@ import {
 import {
     deleteNotesFromList,
     deleteNotesItemById,
+    getSnapshotBufferMap,
     readNotesItem,
     syncSnapshots,
     writeNotesItem,
@@ -242,6 +243,14 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
             return null;
         }
 
+        // get all snapshots contents and convert to buffer
+        // snapshot path: notes_snapshot
+        const snapshotBuffer = await getSnapshotBufferMap(notesId);
+        console.log("snapshots");
+        if (!snapshotBuffer) {
+            return null;
+        }
+
         const { videoId } = currentNotesMetadata;
         const videoMetadata = await getVideoMetadataById(videoId);
         console.log("videoMetadata", videoMetadata);
@@ -258,7 +267,8 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
                 videoMetadata &&
                 videoFilePath &&
                 currentNotes &&
-                currentNotesMetadata
+                currentNotesMetadata &&
+                snapshotBuffer
             )
         ) {
             return null;
@@ -270,6 +280,7 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
             videoMetadata: videoMetadata,
             notesMetadata: currentNotesMetadata,
             currentNotesData: currentNotes,
+            snapshotBuffer: snapshotBuffer,
             buffer: buffer,
         };
     } catch (e) {

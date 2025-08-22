@@ -43,6 +43,7 @@ function CurrentNotesPage() {
                         notesMetadata,
                         currentNotesData,
                         videoPath,
+                        urlDict,
                     } = currentNotesInfo;
                     setCurrentVideoDate(
                         new Date(videoMetadata.dateUploaded).toLocaleString()
@@ -51,6 +52,7 @@ function CurrentNotesPage() {
                     setCurrentVideoFilePath(videoPath);
                     setCurrentNotesMetadata(notesMetadata);
                     setCurrentNotes(currentNotesData);
+                    setSnapshotIdDict(urlDict);
                     setIsLoading(false);
                 });
         })();
@@ -159,7 +161,6 @@ function CurrentNotesPage() {
                 (a, b) => a.timestamp - b.timestamp
             )
         );
-        // console.log("snapshotIdDict", snapshotIdDict);
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         canvas.width = 0;
@@ -414,13 +415,13 @@ function CurrentNotesPage() {
                                     }}
                                 />
                                 <svg
-                                    onClick={async () => {
-                                        await window.notes.saveCurrentNotes(
-                                            notesId,
-                                            currentNotesMetadata,
-                                            currentNotes,
-                                            snapshotIdDict
-                                        );
+                                    onClick={() => {
+                                        // await window.notes.saveCurrentNotes(
+                                        //     notesId,
+                                        //     currentNotesMetadata,
+                                        //     currentNotes,
+                                        //     snapshotIdDict
+                                        // );
                                         setIsEditingName(false);
                                     }}
                                     xmlns="http://www.w3.org/2000/svg"

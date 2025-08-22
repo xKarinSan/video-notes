@@ -133,11 +133,33 @@ async function dictToBase64Map(dict) {
     return Object.fromEntries(entries);
 }
 
+async function getSnapshotBufferMap(notesId) {
+    try {
+        const dir = path.join(SNAPSHOTS_DIR, notesId);
+        const files = await fsp.readdir(dir);
+        const entries = await Promise.all(
+            files
+                .filter((f) => f.endsWith(".jpg"))
+                .map(async (name) => {
+                    const id = path.basename(name, ".jpg");
+                    const buf = await fsp.readFile(path.join(dir, name));
+                    return [id, buf];
+                })
+        );
+        console.log("getSnapshotBufferMap | entries", entries);
+        return Object.fromEntries(entries); // { [snapshotId]: Buffer }
+    } catch (e) {
+        console.error("getSnapshotBufferMap | e", e);
+        return null;
+    }
+}
+
 export {
     writeNotesItem,
     readNotesItem,
     deleteNotesItemById,
     deleteNotesFromList,
     syncSnapshots,
+    getSnapshotBufferMap,
     dictToBase64Map,
 };
