@@ -59,6 +59,7 @@ async function downloadVideoFile(streamingUrl, videoId) {
                 },
             },
             (res) => {
+                console.log("downloadVideoFile | res", res);
                 if (res.statusCode !== 200) {
                     res.resume();
                     fs.unlink(videoPath, () => resolve(false));

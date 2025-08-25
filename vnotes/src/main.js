@@ -122,7 +122,7 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
         await ensureDir(METADATA_DIR);
         await ensureDir(VIDEOS_DIR);
 
-        let videoId = store.get("yt/" + youtubeVideoId);
+        let videoId = store.get("yt." + youtubeVideoId);
         let videoMetadata = {};
         let videoMetadataFilePath = "";
 
@@ -211,8 +211,8 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             }
             return null;
         }
-        store.set("yt/" + youtubeVideoId, videoId);
-        store.set("vd/" + videoId, youtubeVideoId);
+        store.set("yt." + youtubeVideoId, videoId);
+        store.set("vd." + videoId, youtubeVideoId);
         return videoMetadata;
     } catch (e) {
         console.log("add-current-video :", e);
@@ -414,9 +414,9 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
         )
             return false;
 
-        const ytId = store.get("vd/" + videoId);
-        store.delete("yt/" + ytId);
-        store.delete("vd/" + videoId);
+        const ytId = store.get("vd." + videoId);
+        store.delete("yt." + ytId);
+        store.delete("vd." + videoId);
 
         return true;
     } catch (e) {
@@ -444,7 +444,24 @@ ipcMain.handle("delete-notes-record", async (_, noteId) => {
         return true;
     } catch (e) {
         console.log("delete-video-record | e", e);
-        false;
+        return false;
+    }
+});
+
+ipcMain.handle("get-openai-key", async () => {
+    try {
+        return await store.get("settings.open_ai_key");
+    } catch (e) {
+        return null;
+    }
+});
+ipcMain.handle("set-openai-key", async (_, openAiKey) => {
+    try {
+        console.log("set-openai-key | openAiKey", openAiKey);
+        await store.set("settings.open_ai_key", openAiKey);
+        return true;
+    } catch (e) {
+        return false;
     }
 });
 

@@ -24,7 +24,7 @@ function bufferDictToUrlMap(dict) {
         return [id, blobUrl];
     });
     const res = Object.fromEntries(entries);
-    console.log("bufferDictToUrlMap | res",res)
+    console.log("bufferDictToUrlMap | res", res);
     return res;
 }
 
@@ -108,5 +108,14 @@ contextBridge.exposeInMainWorld("notes", {
         await ipcRenderer.invoke("get-all-notes-metadata"),
     deleteNotesMetadataById: async (notesId) =>
         await ipcRenderer.invoke("delete-notes-record", notesId),
+});
 
+contextBridge.exposeInMainWorld("settings", {
+    getOpenAIKey: async () => {
+        return await ipcRenderer.invoke("get-openai-key");
+    },
+    setOpenAIKey: async (openAiKey) => {
+        console.log("openAiKey", openAiKey);
+        return await ipcRenderer.invoke("set-openai-key", openAiKey);
+    },
 });
