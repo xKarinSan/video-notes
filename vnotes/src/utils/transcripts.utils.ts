@@ -34,4 +34,33 @@ async function writeTranscript(
     }
 }
 
-export { writeTranscript };
+async function deleteTranscript(videoId) {
+    try {
+        await ensureDir(TRANSCRIPTS_DIR);
+        await ensureDir(TIMESTAMPED_TRANSCRIPTS_DIR);
+        const timestampedTranscriptFilePath = path.join(
+            TIMESTAMPED_TRANSCRIPTS_DIR,
+            `${videoId}.json`
+        );
+        const timestampedTranscriptExists = await fileExists(
+            timestampedTranscriptFilePath
+        );
+        if (timestampedTranscriptExists) {
+            await fsp.unlink(timestampedTranscriptFilePath);
+        }
+        const transcriptTextFilePath = path.join(
+            TRANSCRIPTS_DIR,
+            `${videoId}.txt`
+        );
+        const transcriptTextExists = await fileExists(transcriptTextFilePath);
+        if (transcriptTextExists) {
+            await fsp.unlink(transcriptTextFilePath);
+        }
+        return true;
+    } catch (e) {
+        console.error("deleteTranscript | e", e);
+        return false;
+    }
+}
+
+export { writeTranscript, deleteTranscript };

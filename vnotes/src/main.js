@@ -42,7 +42,7 @@ import {
     syncSnapshots,
     writeNotesItem,
 } from "./utils/notesItems.utils";
-import { writeTranscript } from "./utils/transcripts.utils";
+import { deleteTranscript, writeTranscript } from "./utils/transcripts.utils";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -392,21 +392,25 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
             notesDeleted,
             recordDeleted,
             snapshotsDeleted,
+            transcriptsDeleted,
         ] = await Promise.all([
             deleteNotesFromList(notesIdList),
             deleteNotesMetadata(notesIdList),
             deleteVideoRecord(videoId),
             deleteSnapshotFromNote(notesIdList),
+            deleteTranscript(videoId),
         ]);
         console.log("notesContentsDeleted", notesContentsDeleted);
         console.log("notesDeleted", notesDeleted);
         console.log("recordDeleted", recordDeleted);
         console.log("snapshotsDeleted", snapshotsDeleted);
+        console.log("transcriptsDeleted", transcriptsDeleted);
         if (
             !notesDeleted ||
             !recordDeleted ||
             !notesContentsDeleted ||
-            !snapshotsDeleted
+            !snapshotsDeleted ||
+            !transcriptsDeleted
         )
             return false;
 
