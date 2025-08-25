@@ -1,4 +1,6 @@
 import { app, BrowserWindow, ipcMain } from "electron";
+import { fetchTranscript } from "youtube-transcript-plus";
+
 import path from "node:path";
 import fsp from "node:fs/promises";
 import started from "electron-squirrel-startup";
@@ -15,11 +17,7 @@ import {
     deleteVideoFile,
     deleteVideoRecord,
 } from "./utils/youtubeVideo.utils";
-import {
-    METADATA_DIR,
-    SNAPSHOTS_DIR,
-    VIDEOS_DIR,
-} from "../const";
+import { METADATA_DIR, SNAPSHOTS_DIR, VIDEOS_DIR } from "../const";
 import {
     ensureDir,
     fileExists,
@@ -44,6 +42,7 @@ import {
     syncSnapshots,
     writeNotesItem,
 } from "./utils/notesItems.utils";
+import { writeTranscript } from "./utils/transcripts.utils";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -161,6 +160,14 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             streamingUrl,
             videoId
         );
+        console.log("isVideoDownloaded? ", isVideoDownloaded);
+        let transcript = [];
+
+        await fetchTranscript(youtubeVideoId).then((res) => {
+            transcript = res;
+        });
+        const savedTranscript = await writeTranscript(videoId, transcript);
+        console.log("savedTranscript? ", savedTranscript);
 
         // download the metadata
         const largestThumbnail = thumbnails[thumbnails.length - 1];
@@ -183,8 +190,16 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             videoMetadata,
             videoId
         );
+        console.log("isMetadataDownloaded? ", isMetadataDownloaded);
 
-        if (!(isVideoDownloaded && isMetadataDownloaded)) {
+        if (
+            !(
+                isVideoDownloaded &&
+                isMetadataDownloaded &&
+                transcript &&
+                savedTranscript
+            )
+        ) {
             // implement rollback
             if (!isVideoDownloaded) {
                 // rollback metadata
@@ -199,7 +214,8 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
         store.set("yt/" + youtubeVideoId, videoId);
         store.set("vd/" + videoId, youtubeVideoId);
         return videoMetadata;
-    } catch {
+    } catch (e) {
+        console.log("add-current-video :", e);
         return null;
     }
 });
