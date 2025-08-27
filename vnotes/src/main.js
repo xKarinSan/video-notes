@@ -42,7 +42,15 @@ import {
     syncSnapshots,
     writeNotesItem,
 } from "./utils/notesItems.utils";
-import { deleteTranscript, writeTranscript } from "./utils/transcripts.utils";
+import {
+    deleteTranscript,
+    getTextTranscript,
+    writeTranscript,
+} from "./utils/transcripts.utils";
+import {
+    splitToChunks,
+    summariseCombinedSummaries,
+} from "./utils/summary.utils";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -484,6 +492,7 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
         */
         let res = [];
         let videoTranscript = await getTextTranscript(videoId);
+        console.log("generate-ai-summary | videoTranscript", videoTranscript);
         if (!videoTranscript) {
             return null;
         }
@@ -492,10 +501,12 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
             return null;
         }
         let chunks = await splitToChunks(videoTranscript);
+        console.log("generate-ai-summary | chunks", chunks);
         if (!chunks) {
             return null;
         }
-        let summary = await summariseCombinedSummaries(chunks);
+        let summary = await summariseCombinedSummaries(chunks, openAIKey);
+        console.log("generate-ai-summary | summary", summary);
         if (!summary) {
             return null;
         }
@@ -510,8 +521,10 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
                 },
             ];
         });
+        console.log("generate-ai-summary | res", res);
         return res;
     } catch (e) {
+        console.log("generate-ai-summary | e", e);
         return null;
     }
 });

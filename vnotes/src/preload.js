@@ -109,8 +109,10 @@ contextBridge.exposeInMainWorld("notes", {
     deleteNotesMetadataById: async (notesId) =>
         await ipcRenderer.invoke("delete-notes-record", notesId),
 
-    generateAISummary: async (notesId) =>
-        await ipcRenderer.invoke("generate-ai-summary", videoId),
+    generateAISummary: async (videoId) => {
+        console.log("generateAISummary | videoId", videoId);
+        return await ipcRenderer.invoke("generate-ai-summary", videoId);
+    },
 });
 
 contextBridge.exposeInMainWorld("settings", {

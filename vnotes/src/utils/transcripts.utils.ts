@@ -66,18 +66,29 @@ async function deleteTranscript(videoId) {
 async function getTextTranscript(videoId) {
     const videoTranscriptTextPath = path.join(
         TRANSCRIPTS_DIR,
-        `${videoId}.json`
+        `${videoId}.txt`
     );
     const videoTranscriptExists = await fsp
         .access(videoTranscriptTextPath)
         .then(() => true)
         .catch(() => false);
+    console.log(
+        "getTextTranscript | videoTranscriptExists",
+        videoTranscriptExists
+    );
     if (!videoTranscriptExists) {
         return null;
     }
 
-    const notesItemContent = await fsp.readFile(videoTranscriptTextPath, "utf-8");
-    return notesItemContent
+    const notesItemContent = await fsp.readFile(
+        videoTranscriptTextPath,
+        "utf-8"
+    );
+    console.log(
+        "getTextTranscript | notesItemContent",
+        videoTranscriptExists
+    );
+    return notesItemContent;
 }
 
 export { writeTranscript, deleteTranscript, getTextTranscript };

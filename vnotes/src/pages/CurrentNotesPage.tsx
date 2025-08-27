@@ -11,6 +11,7 @@ function CurrentNotesPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditingName, setIsEditingName] = useState(false);
+    const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
     const [currentVideo, setCurrentVideo] = useState<Video>();
     const [currentVideoDate, setCurrentVideoDate] = useState<string>("");
     const [currentVideoFilePath, setCurrentVideoFilePath] =
@@ -168,6 +169,28 @@ function CurrentNotesPage() {
         canvas = null;
     }
 
+    async function generateAiSummary() {
+        try {
+            if (!currentVideo || !currentVideo.id) return;
+            setIsGeneratingSummary(true);
+            const res = await window.notes.generateAISummary(currentVideo.id);
+            console.log("generateAiSummary | res", res);
+            if (!(res && res.length > 0)) {
+                setIsGeneratingSummary(false);
+                return;
+            }
+            console.log("generateAiSummary | res", res);
+            setIsGeneratingSummary(false);
+            setCurrentNotes((prevNotes) =>
+                [...prevNotes, ...res].sort((a, b) => a.timestamp - b.timestamp)
+            );
+            setIsGeneratingSummary(false);
+        } catch (e) {
+            console.log("generateAiSummary | e", e);
+            setIsGeneratingSummary(false);
+        }
+    }
+
     function formatTimestamp(timestampSeconds) {
         const hours = Math.floor(timestampSeconds / 3600);
         const minutes = Math.floor((timestampSeconds % 3600) / 60);
@@ -309,7 +332,9 @@ function CurrentNotesPage() {
                     <div className="flex flex-wrap my-2">
                         <button
                             className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
-                            onClick={captureSnapshot}
+                            onClick={() => {
+                                captureSnapshot();
+                            }}
                         >
                             {/* Camera icon */}
                             <svg
@@ -333,6 +358,31 @@ function CurrentNotesPage() {
                             </svg>
                             Capture Snapshot
                         </button>
+
+                        <button
+                            className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
+                            disabled={isGeneratingSummary}
+                            onClick={() => {
+                                generateAiSummary();
+                            }}
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M13 2L3 14h7v8l11-12h-7V2z"
+                                />
+                            </svg>
+                            Generate AI Notes
+                        </button>
+
                         <button
                             className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
                             onClick={exportToPdf}
