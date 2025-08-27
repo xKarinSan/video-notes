@@ -465,12 +465,12 @@ ipcMain.handle("set-openai-key", async (_, openAiKey) => {
     }
 });
 
-ipcMain.handle("generate-ai-summary", async (_, notesId,videoId) => {
+ipcMain.handle("generate-ai-summary", async (_, videoId) => {
     try {
         /*
         1) retrieve the transcript first using videoId
         2) retrieve the OpenAI API key -> if theres no key, return null
-        3) call summariseIndividualChunk to split the chunks
+        3) call splitToChunks to split the chunks
         4) call summariseCombinedSummaries to get the ultimate summary (to be JSON)
         5) call the notes contents which is at notesId
         6) loop the results from step 4 and create a NotesItem instance such that:
@@ -482,9 +482,35 @@ ipcMain.handle("generate-ai-summary", async (_, notesId,videoId) => {
         7) call writeNotesItem to overwrite the contents
 
         */
-        let res= []
-
-        return res
+        let res = [];
+        let videoTranscript = await getTextTranscript(videoId);
+        if (!videoTranscript) {
+            return null;
+        }
+        let openAIKey = await store.get("settings.open_ai_key");
+        if (!openAIKey) {
+            return null;
+        }
+        let chunks = await splitToChunks(videoTranscript);
+        if (!chunks) {
+            return null;
+        }
+        let summary = await summariseCombinedSummaries(chunks);
+        if (!summary) {
+            return null;
+        }
+        summary.forEach((paragraph) => {
+            res = [
+                ...res,
+                {
+                    id: randomUUID(),
+                    isSnapshot: false,
+                    content: paragraph,
+                    timestamp: -1,
+                },
+            ];
+        });
+        return res;
     } catch (e) {
         return null;
     }

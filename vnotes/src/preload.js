@@ -110,7 +110,7 @@ contextBridge.exposeInMainWorld("notes", {
         await ipcRenderer.invoke("delete-notes-record", notesId),
 
     generateAISummary: async (notesId) =>
-        await ipcRenderer.invoke("generate-ai-summary", notesId),
+        await ipcRenderer.invoke("generate-ai-summary", videoId),
 });
 
 contextBridge.exposeInMainWorld("settings", {
