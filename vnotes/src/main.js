@@ -465,6 +465,31 @@ ipcMain.handle("set-openai-key", async (_, openAiKey) => {
     }
 });
 
+ipcMain.handle("generate-ai-summary", async (_, notesId,videoId) => {
+    try {
+        /*
+        1) retrieve the transcript first using videoId
+        2) retrieve the OpenAI API key -> if theres no key, return null
+        3) call summariseIndividualChunk to split the chunks
+        4) call summariseCombinedSummaries to get the ultimate summary (to be JSON)
+        5) call the notes contents which is at notesId
+        6) loop the results from step 4 and create a NotesItem instance such that:
+        - id: generate a new UUID
+        - isSnapshot: false 
+        - content: each item from step 4
+        - timestamp: -1 (no timestamp)
+        - snapshotId: null (do NOT fill this up)
+        7) call writeNotesItem to overwrite the contents
+
+        */
+        let res= []
+
+        return res
+    } catch (e) {
+        return null;
+    }
+});
+
 // APP LIFECYCLE
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
