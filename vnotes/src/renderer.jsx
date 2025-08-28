@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-
+import { ToastContainer } from "react-toastify";
 import Layout from "./Layout";
 import Homepage from "./pages/Homepage";
 import MainNotesPage from "./pages/MainNotesPage";
@@ -40,4 +40,9 @@ const router = createBrowserRouter([
 
 const container = document.getElementById("root");
 const root = createRoot(container);
-root.render(<RouterProvider router={router} />);
+root.render(
+    <>
+        <RouterProvider router={router} />
+        <ToastContainer />
+    </>
+);

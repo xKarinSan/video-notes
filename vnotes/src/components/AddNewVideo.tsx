@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Video } from "../classes/Video";
+import { toast } from "react-toastify";
 type AddNewVideoProps = {
     onVideoAdded?: (video: Video) => void;
 };
@@ -10,23 +11,31 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     async function addVideo() {
         try {
             setIsUploading(true);
+            toast.info("Retrieving video data in progress ...", {
+                theme: "dark",
+            });
 
             const res = await window.api.getVideodata(videoUrl);
 
             setIsUploading(false);
 
             if (res) {
-                console.log("[addVideo] res", res);
                 onVideoAdded?.(res);
-                alert("Video added!");
+                toast.success("Video added!", {
+                    theme: "dark",
+                });
                 return res;
             } else {
-                alert("Video failed to add");
+                toast.error("Video failed to add.", {
+                    theme: "dark",
+                });
                 return null;
             }
         } catch (e) {
             setIsUploading(false);
-            alert("Video failed to add");
+            toast.error("Video failed to add.", {
+                theme: "dark",
+            });
             return null;
         }
     }

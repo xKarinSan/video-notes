@@ -5,6 +5,7 @@ import { NotesMetadata, NotesItem } from "../classes/Notes";
 import { jsPDF } from "jspdf";
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 function CurrentNotesPage() {
     const { notesId } = useParams();
@@ -173,10 +174,14 @@ function CurrentNotesPage() {
         try {
             if (!currentVideo || !currentVideo.id) return;
             setIsGeneratingSummary(true);
+            toast.info("Generating summary in progress..", {
+                theme: "dark",
+            });
             const res = await window.notes.generateAISummary(currentVideo.id);
             console.log("generateAiSummary | res", res);
             if (!(res && res.length > 0)) {
                 setIsGeneratingSummary(false);
+                toast.error("No summary generated.", { theme: "dark" });
                 return;
             }
             console.log("generateAiSummary | res", res);
@@ -184,9 +189,15 @@ function CurrentNotesPage() {
             setCurrentNotes((prevNotes) =>
                 [...prevNotes, ...res].sort((a, b) => a.timestamp - b.timestamp)
             );
+            toast.success(
+                "AI Summary successfully generated and added to notes.",
+                { theme: "dark" }
+            );
+
             setIsGeneratingSummary(false);
         } catch (e) {
             console.log("generateAiSummary | e", e);
+            toast.error("Failed to generate summary.", { theme: "dark" });
             setIsGeneratingSummary(false);
         }
     }
@@ -265,6 +276,9 @@ function CurrentNotesPage() {
         // Save with UUID
         const docId = uuidv4();
         doc.save(`${docId}.pdf`);
+        toast.success("Notes exported!", {
+            theme: "dark",
+        });
     }
 
     async function deleteCurrentNotes() {
@@ -275,17 +289,23 @@ function CurrentNotesPage() {
             setIsDeleting(true);
             const deleted = await window.notes.deleteNotesMetadataById(notesId);
             if (deleted) {
-                alert("Notes deleted successfully.");
+                toast.success("Notes deleted successfully.", {
+                    theme: "dark",
+                });
                 // redirect
                 setIsDeleting(false);
                 navigate("/notes");
             } else {
-                alert("Failed to delete video.");
+                toast.error("Failed to delete video.", {
+                    theme: "dark",
+                });
             }
         } catch (e) {
             console.error("Delete video error:", e);
             setIsDeleting(false);
-            alert("Error deleting video.");
+            toast.error("Error deleting video.", {
+                theme: "dark",
+            });
         }
     }
 
@@ -523,8 +543,10 @@ function CurrentNotesPage() {
                                     <div className="card-body p-2">
                                         <div className="flex">
                                             <p className="text-sm text-gray-500">
-                                                Timestamp:{" "}
-                                                {formatTimestamp(timestamp)}
+                                                {timestamp > -1
+                                                    ? "Timestamp: " +
+                                                      formatTimestamp(timestamp)
+                                                    : ""}
                                             </p>
                                             {!isSnapshot &&
                                             !(editingNoteId === id) ? (

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Video } from "../classes/Video";
 import { NotesMetadata } from "../classes/Notes";
+import { toast } from "react-toastify";
 
 function CurrentVideoPage() {
     const { videoId } = useParams();
@@ -44,17 +45,23 @@ function CurrentVideoPage() {
             .then((newNotes) => {
                 if (newNotes) {
                     setIsCreating(false);
-                    alert("Notes created successfully!");
+                    toast.success("Notes created successfully!", {
+                        theme: "dark",
+                    });
                     const { id } = newNotes;
                     navigate(`/notes/${id}`);
                     return;
                 }
-                alert("Failed to create notes.");
+                toast.error("Failed to create notes.", {
+                    theme: "dark",
+                });
                 setIsCreating(false);
             })
             .catch((e) => {
                 console.log("E", e);
-                alert("Failed to create notes.");
+                toast.error("Failed to create notes.", {
+                    theme: "dark",
+                });
                 setIsCreating(false);
             });
     }
@@ -67,14 +74,20 @@ function CurrentVideoPage() {
         try {
             const deleted = await window.api.deleteCurrentVideo(videoId);
             if (deleted) {
-                alert("Video deleted successfully.");
+                toast.success("Video deleted successfully.", {
+                    theme: "dark",
+                });
                 navigate("/videos");
             } else {
-                alert("Failed to delete video.");
+                toast.error("Failed to delete video.", {
+                    theme: "dark",
+                });
             }
         } catch (e) {
             console.error("Delete video error:", e);
-            alert("Error deleting video.");
+            toast.error("Error deleting video.", {
+                theme: "dark",
+            });
         } finally {
             setIsDeleting(false);
         }
@@ -90,13 +103,19 @@ function CurrentVideoPage() {
                 setCurrentNotesMetadataList((prev) =>
                     prev.filter((note) => note.id !== notesId)
                 );
-                alert("Notes deleted successfully.");
+                toast.success("Notes deleted successfully.", {
+                    theme: "dark",
+                });
             } else {
-                alert("Failed to delete video.");
+                toast.error("Failed to delete notes.", {
+                    theme: "dark",
+                });
             }
         } catch (e) {
             console.error("Delete video error:", e);
-            alert("Error deleting video.");
+            toast.error("Error deleting notes.", {
+                theme: "dark",
+            });
         }
     }
     return (

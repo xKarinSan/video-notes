@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { NotesMetadata } from "../classes/Notes";
+import { toast } from "react-toastify";
 function MainNotesPage() {
     const [loading, setLoading] = useState<boolean>(false);
     const [notesMetadataList, setNotesMetadataList] = useState<NotesMetadata[]>(
@@ -35,13 +36,19 @@ function MainNotesPage() {
                 setNotesMetadataList((prev) =>
                     prev.filter((note) => note.id !== notesId)
                 );
-                alert("Notes deleted successfully.");
+                toast.success("Notes deleted successfully.", {
+                    theme: "dark",
+                });
             } else {
-                alert("Failed to delete video.");
+                toast.error("Failed to delete video.", {
+                    theme: "dark",
+                });
             }
         } catch (e) {
             console.error("Delete video error:", e);
-            alert("Error deleting video.");
+            toast.error("Error deleting video.", {
+                theme: "dark",
+            });
         }
     }
     return (
