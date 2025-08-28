@@ -75,7 +75,7 @@ function CurrentNotesPage() {
                     });
             }
         };
-    }, [notesId, currentNotesMetadata, currentNotes]);
+    }, [notesId, currentNotes]);
 
     function startEditing(note: NotesItem) {
         setEditingNoteId(note.id);
@@ -478,13 +478,13 @@ function CurrentNotesPage() {
                                     }}
                                 />
                                 <svg
-                                    onClick={() => {
-                                        // await window.notes.saveCurrentNotes(
-                                        //     notesId,
-                                        //     currentNotesMetadata,
-                                        //     currentNotes,
-                                        //     snapshotIdDict
-                                        // );
+                                    onClick={async () => {
+                                        await window.notes.saveCurrentNotes(
+                                            notesId,
+                                            currentNotesMetadata,
+                                            currentNotes,
+                                            snapshotIdDict
+                                        );
                                         setIsEditingName(false);
                                     }}
                                     xmlns="http://www.w3.org/2000/svg"
