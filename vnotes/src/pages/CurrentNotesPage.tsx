@@ -174,14 +174,10 @@ function CurrentNotesPage() {
         try {
             if (!currentVideo || !currentVideo.id) return;
             setIsGeneratingSummary(true);
-            toast.info("Generating summary in progress..", {
-                theme: "dark",
-            });
             const res = await window.notes.generateAISummary(currentVideo.id);
             console.log("generateAiSummary | res", res);
             if (!(res && res.length > 0)) {
                 setIsGeneratingSummary(false);
-                toast.error("No summary generated.", { theme: "dark" });
                 return;
             }
             console.log("generateAiSummary | res", res);
@@ -189,17 +185,18 @@ function CurrentNotesPage() {
             setCurrentNotes((prevNotes) =>
                 [...prevNotes, ...res].sort((a, b) => a.timestamp - b.timestamp)
             );
-            toast.success(
-                "AI Summary successfully generated and added to notes.",
-                { theme: "dark" }
-            );
-
             setIsGeneratingSummary(false);
         } catch (e) {
             console.log("generateAiSummary | e", e);
-            toast.error("Failed to generate summary.", { theme: "dark" });
             setIsGeneratingSummary(false);
         }
+    }
+    function handleGenerateAiSummary() {
+        toast.promise(generateAiSummary(), {
+            pending: "Generating summary in progress..",
+            success: "AI Summary successfully generated and added to notes.",
+            error: "Failed to generate summary",
+        });
     }
 
     function formatTimestamp(timestampSeconds) {
@@ -276,9 +273,7 @@ function CurrentNotesPage() {
         // Save with UUID
         const docId = uuidv4();
         doc.save(`${docId}.pdf`);
-        toast.success("Notes exported!", {
-            theme: "dark",
-        });
+        toast.success("Notes exported!");
     }
 
     async function deleteCurrentNotes() {
@@ -289,24 +284,22 @@ function CurrentNotesPage() {
             setIsDeleting(true);
             const deleted = await window.notes.deleteNotesMetadataById(notesId);
             if (deleted) {
-                toast.success("Notes deleted successfully.", {
-                    theme: "dark",
-                });
                 // redirect
                 setIsDeleting(false);
                 navigate("/notes");
-            } else {
-                toast.error("Failed to delete video.", {
-                    theme: "dark",
-                });
             }
         } catch (e) {
             console.error("Delete video error:", e);
             setIsDeleting(false);
-            toast.error("Error deleting video.", {
-                theme: "dark",
-            });
         }
+    }
+
+    function handleDeleteCurrentNotes() {
+        toast.promise(deleteCurrentNotes(), {
+            pending: "Deleting notes in progress",
+            success: "Notes deleted successfully.",
+            error: "Notes failed to delete.",
+        });
     }
 
     return (
@@ -383,7 +376,7 @@ function CurrentNotesPage() {
                             className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
                             disabled={isGeneratingSummary}
                             onClick={() => {
-                                generateAiSummary();
+                                handleGenerateAiSummary();
                             }}
                         >
                             <svg
@@ -433,7 +426,7 @@ function CurrentNotesPage() {
                             className={`btn bg-red-700 mx-1  w-fit text-white flex items-center gap-2 ${
                                 isDeleting ? "loading btn-disabled" : ""
                             }`}
-                            onClick={deleteCurrentNotes}
+                            onClick={handleDeleteCurrentNotes}
                             disabled={isDeleting}
                         >
                             <svg

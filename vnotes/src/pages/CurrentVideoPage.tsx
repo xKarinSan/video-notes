@@ -39,31 +39,28 @@ function CurrentVideoPage() {
 
     async function createNewNotes() {
         setIsCreating(true);
-
         await window.notes
             .createNewNotes(videoId)
             .then((newNotes) => {
                 if (newNotes) {
                     setIsCreating(false);
-                    toast.success("Notes created successfully!", {
-                        theme: "dark",
-                    });
                     const { id } = newNotes;
                     navigate(`/notes/${id}`);
                     return;
                 }
-                toast.error("Failed to create notes.", {
-                    theme: "dark",
-                });
                 setIsCreating(false);
             })
             .catch((e) => {
                 console.log("E", e);
-                toast.error("Failed to create notes.", {
-                    theme: "dark",
-                });
                 setIsCreating(false);
             });
+    }
+    function handleCreateNewNotes() {
+        toast.promise(createNewNotes(), {
+            pending: "Creating notes in progress..",
+            success: "Notes created successfully!",
+            error: "Failed to create notes.",
+        });
     }
 
     async function deleteVideo() {
@@ -74,23 +71,20 @@ function CurrentVideoPage() {
         try {
             const deleted = await window.api.deleteCurrentVideo(videoId);
             if (deleted) {
-                toast.success("Video deleted successfully.", {
-                    theme: "dark",
-                });
                 navigate("/videos");
-            } else {
-                toast.error("Failed to delete video.", {
-                    theme: "dark",
-                });
             }
         } catch (e) {
             console.error("Delete video error:", e);
-            toast.error("Error deleting video.", {
-                theme: "dark",
-            });
         } finally {
             setIsDeleting(false);
         }
+    }
+    function handleDeleteVideo() {
+        toast.promise(deleteVideo(), {
+            pending: "Deleting video in progress..",
+            success: "Video deleted successfully.",
+            error: "Failed to delete video.",
+        });
     }
 
     async function deleteCurrentNotes(notesId) {
@@ -103,20 +97,18 @@ function CurrentVideoPage() {
                 setCurrentNotesMetadataList((prev) =>
                     prev.filter((note) => note.id !== notesId)
                 );
-                toast.success("Notes deleted successfully.", {
-                    theme: "dark",
-                });
-            } else {
-                toast.error("Failed to delete notes.", {
-                    theme: "dark",
-                });
             }
         } catch (e) {
             console.error("Delete video error:", e);
-            toast.error("Error deleting notes.", {
-                theme: "dark",
-            });
         }
+    }
+
+    function handleDeleteCurrentNotes(notesId) {
+        toast.promise(deleteCurrentNotes(notesId), {
+            pending: "Deleting notes in progress..",
+            success: "Notes deleted successfully.",
+            error: "Failed to delete notes.",
+        });
     }
     return (
         <div className="flex flex-col items-center justify-center">
@@ -153,7 +145,7 @@ function CurrentVideoPage() {
                                         isCreating ? "btn-disabled loading" : ""
                                     }`}
                                     disabled={isCreating}
-                                    onClick={createNewNotes}
+                                    onClick={handleCreateNewNotes}
                                 >
                                     {!isCreating && (
                                         <svg
@@ -184,7 +176,7 @@ function CurrentVideoPage() {
                                     className={`btn bg-red-700 w-fit text-white flex items-center ${
                                         isDeleting ? "loading btn-disabled" : ""
                                     }`}
-                                    onClick={deleteVideo}
+                                    onClick={handleDeleteVideo}
                                     disabled={isDeleting}
                                 >
                                     <svg
@@ -278,7 +270,9 @@ function CurrentVideoPage() {
                                                 </button>{" "}
                                                 <button
                                                     onClick={() =>
-                                                        deleteCurrentNotes(id)
+                                                        handleDeleteCurrentNotes(
+                                                            id
+                                                        )
                                                     }
                                                     className="btn btn-black btn-xs btn-square m-2"
                                                     title="Delete note"

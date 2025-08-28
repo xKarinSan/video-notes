@@ -15,7 +15,6 @@ function MainNotesPage() {
         (async () => {
             try {
                 const allNotes = await window.notes.getAllNotesMetadata();
-                console.log(allNotes);
                 setNotesMetadataList(allNotes);
             } catch (e) {
                 console.log("E", e);
@@ -36,20 +35,18 @@ function MainNotesPage() {
                 setNotesMetadataList((prev) =>
                     prev.filter((note) => note.id !== notesId)
                 );
-                toast.success("Notes deleted successfully.", {
-                    theme: "dark",
-                });
-            } else {
-                toast.error("Failed to delete video.", {
-                    theme: "dark",
-                });
             }
         } catch (e) {
             console.error("Delete video error:", e);
-            toast.error("Error deleting video.", {
-                theme: "dark",
-            });
         }
+    }
+
+    function handleDeleteCurrentNotes(notesId) {
+        toast.promise(deleteCurrentNotes(notesId), {
+            pending: "Deleting notes in progress..",
+            success: "Notes deleted successfully.",
+            error: "Failed to delete notes",
+        });
     }
     return (
         <div>
@@ -108,7 +105,7 @@ function MainNotesPage() {
                                         </button>
                                         <button
                                             onClick={() =>
-                                                deleteCurrentNotes(id)
+                                                handleDeleteCurrentNotes(id)
                                             }
                                             className="btn btn-black btn-xs btn-square m-2"
                                             title="Delete note"

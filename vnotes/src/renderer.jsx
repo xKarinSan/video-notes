@@ -43,6 +43,6 @@ const root = createRoot(container);
 root.render(
     <>
         <RouterProvider router={router} />
-        <ToastContainer />
+        <ToastContainer theme="dark" />
     </>
 );
