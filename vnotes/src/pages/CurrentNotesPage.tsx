@@ -214,6 +214,13 @@ function CurrentNotesPage() {
         return `${hh}:${mm}:${ss}`;
     }
 
+    function handleClickedTimestamp(timestamp) {
+        if (!videoRef.current || timestamp == -1) return;
+        const video = videoRef.current;
+        video.currentTime = timestamp;
+        video.play();
+    }
+
     async function exportToPdf() {
         if (!currentNotesMetadata) return;
 
@@ -242,7 +249,6 @@ function CurrentNotesPage() {
                     img.onload = () => resolve(null);
                 });
                 const aspectRatio = img.naturalWidth / img.naturalHeight;
-
                 const imgWidth = 150;
                 const imgHeight = imgWidth / aspectRatio;
                 // page break if needed
@@ -400,7 +406,6 @@ function CurrentNotesPage() {
                             className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
                             onClick={exportToPdf}
                         >
-                            {/* Document file icon */}
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
@@ -535,7 +540,14 @@ function CurrentNotesPage() {
                                 >
                                     <div className="card-body p-2">
                                         <div className="flex">
-                                            <p className="text-sm text-gray-500">
+                                            <p
+                                                className="text-sm text-gray-500 hover:cursor-pointer w-fit"
+                                                onClick={() => {
+                                                    handleClickedTimestamp(
+                                                        timestamp
+                                                    );
+                                                }}
+                                            >
                                                 {timestamp > -1
                                                     ? "Timestamp: " +
                                                       formatTimestamp(timestamp)
