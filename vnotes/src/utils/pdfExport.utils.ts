@@ -1,9 +1,8 @@
 import { jsPDF } from "jspdf";
-import { v4 as uuidv4 } from "uuid";
-import { NotesItem, NotesMetadata } from "../classes/Notes";
+import { NotesItem } from "../classes/Notes";
 import { NotesHeading } from "../classes/Pdf";
 
-function buildPdf(notesHeading: NotesHeading, notesContent: NotesItem[]) {
+async function buildPdf(notesHeading: NotesHeading, notesContent: NotesItem[]) {
     /*
     Top part:
     - Title of the notes
@@ -19,16 +18,22 @@ function buildPdf(notesHeading: NotesHeading, notesContent: NotesItem[]) {
 
     // 1) init document
     const doc = new jsPDF("p", "mm", [297, 210]);
-    let pageHeight = 0;
+    let currentPageHeight = 0;
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
     // 2) build the top parts
-    pageHeight += buildTopPart(doc, notesHeading, pageWidth);
+    currentPageHeight = buildTopPart(doc, notesHeading, pageWidth);
 
     // 3) build the body (note details)
-    buildBody(doc);
-    const docId = uuidv4();
-    doc.save(`${docId}.pdf`);
+    currentPageHeight = await buildBody(
+        doc,
+        notesContent,
+        currentPageHeight,
+        pageHeight,
+        pageWidth
+    );
+    doc.save(`${notesHeading.notesTitle}.pdf`);
 }
 
 // ============ FOR TOP CONTENT
@@ -55,12 +60,16 @@ function buildTopPart(doc, notesHeading: NotesHeading, pageWidth) {
     // Video Title
     doc.setFontSize(14);
     doc.text(videoTitle ?? "Video Title Here", margin, currentHeight);
-    currentHeight += 10;
+    currentHeight += 7;
 
     // Video URL
     doc.setFontSize(12);
-    doc.text(videoUrl ?? "Video URL Here", margin, currentHeight);
-    currentHeight += 20;
+    doc.text(
+        videoUrl ? `Video Link: ${videoUrl}` : "Video URL Here",
+        margin,
+        currentHeight
+    );
+    currentHeight += 5;
 
     // Draw a line to separate top part from body
     doc.setLineWidth(0.5);
@@ -71,12 +80,87 @@ function buildTopPart(doc, notesHeading: NotesHeading, pageWidth) {
 }
 
 // ============ FOR THE MAIN NOTES
-function buildBody(doc) {}
+async function buildBody(
+    doc,
+    notesContent: NotesItem[],
+    currentPageHeight,
+    pageHeight,
+    pageWidth
+) {
+    for (const note of notesContent) {
+        if (note.isSnapshot) {
+            currentPageHeight = await addSnapshot(
+                doc,
+                note,
+                currentPageHeight,
+                pageHeight
+            );
+        } else {
+            currentPageHeight = generateText(
+                doc,
+                note,
+                currentPageHeight,
+                pageHeight,
+                pageWidth
+            );
+        }
+    }
+    return currentPageHeight;
+}
 
-// ============ FOR TH CONTENTS
+// ============ FOR THE CONTENTS
 
 // add snapshot
-function addSnapshot() {}
+async function addSnapshot(
+    doc,
+    notesContent: NotesItem,
+    currentPageHeight,
+    pageHeight
+) {
+    let imgData = notesContent.content;
+    const img = new Image();
+    img.src = imgData;
+    await new Promise((resolve) => {
+        img.onload = () => resolve(null);
+    });
+    const aspectRatio = img.naturalWidth / img.naturalHeight;
+    const imgWidth = 150;
+    const imgHeight = imgWidth / aspectRatio;
+    // page break if needed
+    if (currentPageHeight + imgHeight > pageHeight - 20) {
+        doc.addPage();
+        currentPageHeight = 20;
+    }
+    doc.addImage(imgData, "PNG", 10, currentPageHeight, imgWidth, imgHeight);
+    currentPageHeight += imgHeight + 10;
+    return currentPageHeight;
+}
+
+function generateText(
+    doc,
+    noteItem: NotesItem,
+    currentPageHeight,
+    pageHeight,
+    pageWidth
+) {
+    const marginX = 10;
+    const marginY = 20;
+    doc.setFontSize = 14;
+
+    const bottomMargin = 10;
+    const lineHeight = doc.getFontSize() / doc.internal.scaleFactor;
+    const lines = doc.splitTextToSize(noteItem.content, pageWidth - 20);
+    for (const line of lines) {
+        if (currentPageHeight + lineHeight > pageHeight - bottomMargin) {
+            doc.addPage();
+            currentPageHeight = marginY;
+        }
+        doc.text(line, marginX, currentPageHeight);
+        currentPageHeight += lineHeight;
+    }
+    currentPageHeight += 2;
+    return currentPageHeight;
+}
 
 function addSummary() {}
 

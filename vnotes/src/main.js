@@ -83,7 +83,7 @@ const createWindow = async () => {
     }
 
     // Open the DevTools.
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
 };
 // HELPERS
 

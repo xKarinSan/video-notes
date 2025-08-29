@@ -285,7 +285,7 @@ function CurrentNotesPage() {
             videoTitle: currentVideo?.name ?? "N/A",
             videoUrl: currentVideo?.videoUrl ?? "N/A",
         };
-        buildPdf(notesHeading, currentNotes);
+        await buildPdf(notesHeading, currentNotes);
     }
 
     async function deleteCurrentNotes() {
