@@ -63,7 +63,7 @@ function MainNotesPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {notesMetadataList.map((currentNotesMetadata) => {
+                        {notesMetadataList?.map((currentNotesMetadata) => {
                             const { id, title, createdDate, lastEdited } =
                                 currentNotesMetadata;
                             const createdDateString = new Date(

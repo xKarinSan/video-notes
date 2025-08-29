@@ -149,12 +149,18 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
 
         videoId = randomUUID();
         const basicInfo = await ytdl.getInfo(videoUrl);
+        // save basic Info as json
+        // const testingPath = path.join(
+        //     METADATA_DIR,
+        //     " videoMetadataFilePath.json"
+        // );
+        // await fsp.writeFile(testingPath, JSON.stringify(basicInfo, null, 2));
         const { videoDetails, formats } = basicInfo;
         const {
             title,
             description,
             lengthSeconds: timestamp,
-            videoUrl: retrieved_url,
+            video_url,
             uploadDate,
             author,
             thumbnails,
@@ -181,9 +187,10 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
         const largestThumbnail = thumbnails[thumbnails.length - 1];
         const uploadDateInMs = new Date(uploadDate).getTime();
         const opName = author.name;
+        console.log("video_url", video_url);
         videoMetadata = {
             id: videoId,
-            videoUrl: retrieved_url,
+            videoUrl: video_url,
             name: title,
             description: description,
             dateExtracted: Date.now(),
@@ -234,7 +241,6 @@ ipcMain.handle("get-current-video", async (_, videoId) => {
     if (!(videoMetadata && videoFilePath)) {
         return null;
     }
-
     const buffer = fs.readFileSync(videoFilePath);
     return {
         metadata: videoMetadata,

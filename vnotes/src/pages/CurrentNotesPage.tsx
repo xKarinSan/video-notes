@@ -2,8 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { Video } from "../classes/Video";
 import { NotesMetadata, NotesItem } from "../classes/Notes";
-import { jsPDF } from "jspdf";
-import { v4 as uuidv4 } from "uuid";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { buildPdf } from "../utils/pdfExport.utils";
@@ -285,7 +283,7 @@ function CurrentNotesPage() {
         const notesHeading: NotesHeading = {
             notesTitle: currentNotesMetadata.title,
             videoTitle: currentVideo?.name ?? "N/A",
-            videoUrl: currentVideoFilePath,
+            videoUrl: currentVideo?.videoUrl ?? "N/A",
         };
         buildPdf(notesHeading, currentNotes);
     }

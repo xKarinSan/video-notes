@@ -9,6 +9,7 @@ interface Video {
     opName: string;
     duration: number;
     notesIdList: string[];
+    videoUrl: string;
 }
 
 interface Transcript {
