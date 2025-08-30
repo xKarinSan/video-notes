@@ -11,28 +11,26 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     async function addVideo() {
         try {
             setIsUploading(true);
+            // toast.info("Retrieving video data in progress ...");
+
             const res = await window.api.getVideodata(videoUrl);
+
             setIsUploading(false);
+
             if (res) {
                 onVideoAdded?.(res);
+                toast.success("Video added!");
                 return res;
             } else {
+                toast.error("Video failed to add.");
                 return null;
             }
         } catch (e) {
             setIsUploading(false);
+            toast.error("Video failed to add.");
             return null;
         }
     }
-
-    function handleAddVideo() {
-        toast.promise(addVideo(), {
-            pending: "Retrieving video data in progress ...",
-            success: "Video added!",
-            error: "Video failed to add.",
-        });
-    }
-
     return (
         <div>
             <div className="card bg-base-300 w-96 shadow-sm m-auto ">
@@ -48,7 +46,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                         />
                         <button
                             className={"btn bg-blue-700 m-auto w-full mt-2"}
-                            onClick={() => handleAddVideo()}
+                            onClick={() => addVideo()}
                             disabled={isUploading}
                         >
                             {isUploading ? "Adding..." : "Add Video"}

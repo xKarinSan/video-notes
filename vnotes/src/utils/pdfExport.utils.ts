@@ -76,7 +76,7 @@ function buildTopPart(doc, notesHeading: NotesHeading, pageWidth) {
     doc.line(margin, currentHeight, pageWidth - margin, currentHeight);
     currentHeight += 10;
 
-    return currentHeight; // Return the height where the body should start
+    return currentHeight;
 }
 
 // ============ FOR THE MAIN NOTES
@@ -117,6 +117,7 @@ async function addSnapshot(
     currentPageHeight,
     pageHeight
 ) {
+    const lineHeight = doc.getFontSize() / doc.internal.scaleFactor;
     let imgData = notesContent.content;
     const img = new Image();
     img.src = imgData;
@@ -126,13 +127,21 @@ async function addSnapshot(
     const aspectRatio = img.naturalWidth / img.naturalHeight;
     const imgWidth = 150;
     const imgHeight = imgWidth / aspectRatio;
+
     // page break if needed
     if (currentPageHeight + imgHeight > pageHeight - 20) {
         doc.addPage();
         currentPageHeight = 20;
     }
     doc.addImage(imgData, "PNG", 10, currentPageHeight, imgWidth, imgHeight);
-    currentPageHeight += imgHeight + 10;
+    currentPageHeight += imgHeight;
+    doc.text(
+        `Snapshot at: ${notesContent.timestamp}`,
+        10,
+        currentPageHeight + lineHeight
+    );
+    currentPageHeight += lineHeight;
+
     return currentPageHeight;
 }
 
@@ -146,10 +155,16 @@ function generateText(
     const marginX = 10;
     const marginY = 20;
     doc.setFontSize = 14;
-
+    console.log("generateText | noteItem.content", noteItem.content);
     const bottomMargin = 10;
     const lineHeight = doc.getFontSize() / doc.internal.scaleFactor;
-    const lines = doc.splitTextToSize(noteItem.content, pageWidth - 20);
+    currentPageHeight += lineHeight;
+    const timestampPrefix =
+        noteItem.timestamp > -1 ? `   [${noteItem.timestamp}]` : "   ";
+    console.log("generateText | timestampPrefix", timestampPrefix);
+    const contents = timestampPrefix + noteItem.content;
+    const lines = doc.splitTextToSize(contents, pageWidth - 20);
+    console.log("generateText | lines", lines);
     for (const line of lines) {
         if (currentPageHeight + lineHeight > pageHeight - bottomMargin) {
             doc.addPage();
@@ -161,9 +176,5 @@ function generateText(
     currentPageHeight += 2;
     return currentPageHeight;
 }
-
-function addSummary() {}
-
-function addNotes() {}
 
 export { buildPdf };

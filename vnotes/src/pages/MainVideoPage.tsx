@@ -21,7 +21,7 @@ function MainVideoPage() {
         return `${h}:${m}:${s}`;
     }
     function handleVideoAdded(newVideo: Video) {
-        setVideos((videos) => [...videos, newVideo]); // prepend or append
+        setVideos((videos) => [...videos, newVideo]);
     }
 
     useEffect(() => {

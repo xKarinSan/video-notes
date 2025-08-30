@@ -178,7 +178,9 @@ function CurrentNotesPage() {
             console.log("generateAiSummary | res", res);
             if (!(res && res.length > 0)) {
                 setIsGeneratingSummary(false);
-                return;
+                throw new Error(
+                    "No AI summary generated for the current video."
+                );
             }
             console.log("generateAiSummary | res", res);
             setIsGeneratingSummary(false);
@@ -189,8 +191,10 @@ function CurrentNotesPage() {
         } catch (e) {
             console.log("generateAiSummary | e", e);
             setIsGeneratingSummary(false);
+            throw e;
         }
     }
+
     function handleGenerateAiSummary() {
         toast.promise(generateAiSummary(), {
             pending: "Generating summary in progress..",
@@ -223,63 +227,6 @@ function CurrentNotesPage() {
 
     async function exportToPdf() {
         if (!currentNotesMetadata) return;
-
-        // const doc = new jsPDF();
-        // const pageHeight = doc.internal.pageSize.getHeight();
-        // const pageWidth = doc.internal.pageSize.getWidth();
-
-        // let y = 20;
-
-        // // title
-        // doc.setFontSize(16);
-        // doc.text(currentNotesMetadata.title, 10, y);
-        // y += 10;
-
-        // // notes contents
-        // doc.setFontSize(12);
-
-        // for (const note of currentNotes) {
-        //     if (note.isSnapshot) {
-        //         // convert blob URL if needed
-        //         let imgData = note.content;
-        //         const img = new Image();
-        //         img.src = imgData;
-
-        //         await new Promise((resolve) => {
-        //             img.onload = () => resolve(null);
-        //         });
-        //         const aspectRatio = img.naturalWidth / img.naturalHeight;
-        //         const imgWidth = 150;
-        //         const imgHeight = imgWidth / aspectRatio;
-        //         // page break if needed
-        //         if (y + imgHeight > pageHeight - 20) {
-        //             doc.addPage();
-        //             y = 20;
-        //         }
-        //         doc.addImage(imgData, "PNG", 10, y, imgWidth, imgHeight);
-        //         y += imgHeight + 10;
-        //     } else {
-        //         // wrap text automatically
-        //         const splitText = doc.splitTextToSize(
-        //             note.content,
-        //             pageWidth - 20
-        //         );
-
-        //         // page break if needed
-        //         if (y + splitText.length * 7 > pageHeight - 20) {
-        //             doc.addPage();
-        //             y = 20;
-        //         }
-
-        //         doc.text(splitText, 10, y);
-        //         y += splitText.length * 7 + 5;
-        //     }
-        // }
-
-        // // Save with UUID
-        // const docId = uuidv4();
-        // doc.save(`${docId}.pdf`);
-        // toast.success("Notes exported!");
         const notesHeading: NotesHeading = {
             notesTitle: currentNotesMetadata.title,
             videoTitle: currentVideo?.name ?? "N/A",
