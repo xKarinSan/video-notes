@@ -18,8 +18,14 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
             setIsUploading(false);
 
             if (res) {
-                onVideoAdded?.(res);
-                return res;
+                const { videoMetadata, existingVideo } = res;
+                if (existingVideo) {
+                    toast.error("Video already exists!");
+                } else {
+                    onVideoAdded?.(videoMetadata);
+                    toast.success("Video added!");
+                }
+                return videoMetadata;
             } else {
                 throw new Error("Video failed to add");
             }
@@ -31,7 +37,6 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     function handleAddVideo() {
         toast.promise(addVideo(), {
             pending: "Adding video...",
-            success: "Video added!",
             error: "Failed to add video",
         });
     }

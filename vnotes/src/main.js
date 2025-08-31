@@ -132,6 +132,8 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
 
         let videoId = store.get("yt." + youtubeVideoId);
         let videoMetadata = {};
+        let res = {};
+        res.existingVideo = false;
         let videoMetadataFilePath = "";
 
         if (videoId) {
@@ -141,10 +143,13 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             try {
                 videoMetadata = JSON.parse(raw);
                 videoMetadata.id = videoId;
+                res.existingVideo = true;
             } catch {
                 videoMetadata = null;
             }
-            return videoMetadata;
+            res.videoMetadata = videoMetadata;
+            console.log("res", res);
+            return res;
         }
 
         videoId = randomUUID();
@@ -231,7 +236,9 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
         }
         store.set("yt." + youtubeVideoId, videoId);
         store.set("vd." + videoId, youtubeVideoId);
-        return videoMetadata;
+        res.videoMetadata = videoMetadata;
+        console.log("res", res);
+        return res;
     } catch (e) {
         console.log("add-current-video :", e);
         return null;
