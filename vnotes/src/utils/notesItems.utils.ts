@@ -176,7 +176,7 @@ async function deleteSnapshotFromNote(notesIdList) {
     try {
         await ensureDir(SNAPSHOTS_DIR);
         for (const notesId of notesIdList) {
-            console.log("deleteSnapshotFromNote | notesId: ",notesId)
+            console.log("deleteSnapshotFromNote | notesId: ", notesId);
             const snapshotsFilePath = path.join(SNAPSHOTS_DIR, notesId);
             const snapshotsExist = await fileExists(snapshotsFilePath);
 

@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import { NotesItem } from "../classes/Notes";
 import { NotesHeading } from "../classes/Pdf";
-
+import { formatTimestamp } from "./timestamp.utils";
 async function buildPdf(notesHeading: NotesHeading, notesContent: NotesItem[]) {
     /*
     Top part:
@@ -136,11 +136,11 @@ async function addSnapshot(
     doc.addImage(imgData, "PNG", 10, currentPageHeight, imgWidth, imgHeight);
     currentPageHeight += imgHeight;
     doc.text(
-        `Snapshot at: ${notesContent.timestamp}`,
+        `Snapshot at: ${formatTimestamp(notesContent.timestamp)}`,
         10,
         currentPageHeight + lineHeight
     );
-    currentPageHeight += lineHeight;
+    currentPageHeight += lineHeight + 2;
 
     return currentPageHeight;
 }
@@ -160,7 +160,9 @@ function generateText(
     const lineHeight = doc.getFontSize() / doc.internal.scaleFactor;
     currentPageHeight += lineHeight;
     const timestampPrefix =
-        noteItem.timestamp > -1 ? `   [${noteItem.timestamp}]` : "   ";
+        noteItem.timestamp > -1
+            ? `   [${formatTimestamp(noteItem.timestamp)}]`
+            : "   ";
     console.log("generateText | timestampPrefix", timestampPrefix);
     const contents = timestampPrefix + noteItem.content;
     const lines = doc.splitTextToSize(contents, pageWidth - 20);

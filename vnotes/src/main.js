@@ -83,7 +83,7 @@ const createWindow = async () => {
     }
 
     // Open the DevTools.
-    // mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
 };
 // HELPERS
 
@@ -223,6 +223,9 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             if (!isMetadataDownloaded) {
                 // rollback video download
                 await deleteVideoFile(videoId);
+            }
+            if (!savedTranscript) {
+                await deleteTranscript(videoId);
             }
             return null;
         }

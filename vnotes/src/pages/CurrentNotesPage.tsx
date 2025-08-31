@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { buildPdf } from "../utils/pdfExport.utils";
 import { NotesHeading } from "../classes/Pdf";
+import { formatTimestamp } from "../utils/timestamp.utils";
 
 function CurrentNotesPage() {
     const { notesId } = useParams();
@@ -176,18 +177,16 @@ function CurrentNotesPage() {
             setIsGeneratingSummary(true);
             const res = await window.notes.generateAISummary(currentVideo.id);
             console.log("generateAiSummary | res", res);
+            setIsGeneratingSummary(false);
             if (!(res && res.length > 0)) {
-                setIsGeneratingSummary(false);
                 throw new Error(
                     "No AI summary generated for the current video."
                 );
             }
             console.log("generateAiSummary | res", res);
-            setIsGeneratingSummary(false);
             setCurrentNotes((prevNotes) =>
                 [...prevNotes, ...res].sort((a, b) => a.timestamp - b.timestamp)
             );
-            setIsGeneratingSummary(false);
         } catch (e) {
             console.log("generateAiSummary | e", e);
             setIsGeneratingSummary(false);
@@ -201,21 +200,6 @@ function CurrentNotesPage() {
             success: "AI Summary successfully generated and added to notes.",
             error: "Failed to generate summary",
         });
-    }
-
-    function formatTimestamp(timestampSeconds) {
-        const hours = Math.floor(timestampSeconds / 3600);
-        const minutes = Math.floor((timestampSeconds % 3600) / 60);
-        const seconds = timestampSeconds % 60;
-
-        // Pad hours/minutes
-        const hh = String(hours).padStart(2, "0");
-        const mm = String(minutes).padStart(2, "0");
-
-        // Seconds with 3 decimal places
-        const ss = seconds.toFixed(3).padStart(6, "0");
-
-        return `${hh}:${mm}:${ss}`;
     }
 
     function handleClickedTimestamp(timestamp) {
@@ -242,11 +226,13 @@ function CurrentNotesPage() {
         try {
             setIsDeleting(true);
             const deleted = await window.notes.deleteNotesMetadataById(notesId);
+            setIsDeleting(false);
             if (deleted) {
                 // redirect
-                setIsDeleting(false);
                 navigate("/notes");
+                return;
             }
+            throw new Error("Notes failed to delete.");
         } catch (e) {
             console.error("Delete video error:", e);
             setIsDeleting(false);
