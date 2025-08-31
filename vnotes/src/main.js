@@ -83,7 +83,7 @@ const createWindow = async () => {
     }
 
     // Open the DevTools.
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
 };
 // HELPERS
 
@@ -154,12 +154,6 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
 
         videoId = randomUUID();
         const basicInfo = await ytdl.getInfo(videoUrl);
-        // save basic Info as json
-        // const testingPath = path.join(
-        //     METADATA_DIR,
-        //     " videoMetadataFilePath.json"
-        // );
-        // await fsp.writeFile(testingPath, JSON.stringify(basicInfo, null, 2));
         const { videoDetails, formats } = basicInfo;
         const {
             title,
