@@ -1,13 +1,13 @@
 import { NotesItem } from "../classes/Notes";
 import path from "node:path";
-import { NOTES_ITEM_DIR, SNAPSHOTS_DIR } from "../../const";
+import { PATHS } from "../../const";
 import fsp from "node:fs/promises";
 import { ensureDir, fileExists } from "./files.utils";
 
 async function writeNotesItem(notesId: string, notes: NotesItem[]) {
     try {
-        await ensureDir(NOTES_ITEM_DIR);
-        const notesItemFilePath = path.join(NOTES_ITEM_DIR, `${notesId}.json`);
+        await ensureDir(PATHS.NOTES_ITEM_DIR);
+        const notesItemFilePath = path.join(PATHS.NOTES_ITEM_DIR, `${notesId}.json`);
         console.log("notesItemFilePath", notesItemFilePath);
         notes.map((note: NotesItem) => {
             note.content = note.snapshotId ?? note.content;
@@ -24,7 +24,7 @@ async function writeNotesItem(notesId: string, notes: NotesItem[]) {
 
 async function readNotesItem(notesId) {
     try {
-        const notesItemFilePath = path.join(NOTES_ITEM_DIR, `${notesId}.json`);
+        const notesItemFilePath = path.join(PATHS.NOTES_ITEM_DIR, `${notesId}.json`);
         const notesItemExists = await fsp
             .access(notesItemFilePath)
             .then(() => true)
@@ -43,10 +43,10 @@ async function readNotesItem(notesId) {
 
 async function deleteNotesFromList(notesIdList) {
     try {
-        await ensureDir(NOTES_ITEM_DIR);
+        await ensureDir(PATHS.NOTES_ITEM_DIR);
         for (const notesId of notesIdList) {
             const notesItemsFilePath = path.join(
-                NOTES_ITEM_DIR,
+                PATHS.NOTES_ITEM_DIR,
                 `${notesId}.json`
             );
             const notesItemsExists = await fsp
@@ -67,7 +67,7 @@ async function deleteNotesFromList(notesIdList) {
 
 async function deleteNotesItemById(notesId) {
     try {
-        const notesItemFilePath = path.join(NOTES_ITEM_DIR, `${notesId}.json`);
+        const notesItemFilePath = path.join(PATHS.NOTES_ITEM_DIR, `${notesId}.json`);
         await fsp.unlink(notesItemFilePath);
         return true;
     } catch (e) {
@@ -78,7 +78,7 @@ async function deleteNotesItemById(notesId) {
 
 async function syncSnapshots(notesId, notesDetails, bufferDict) {
     try {
-        const currSnapshotsPath = path.join(SNAPSHOTS_DIR, notesId);
+        const currSnapshotsPath = path.join(PATHS.SNAPSHOTS_DIR, notesId);
         ensureDir(currSnapshotsPath);
         // find all that is matching (union)
         // find the ones that are missing in note
@@ -135,7 +135,7 @@ async function dictToBase64Map(dict) {
 
 async function getSnapshotBufferMap(notesId) {
     try {
-        const dir = path.join(SNAPSHOTS_DIR, notesId);
+        const dir = path.join(PATHS.SNAPSHOTS_DIR, notesId);
         const files = await fsp.readdir(dir);
         const entries = await Promise.all(
             files
@@ -156,7 +156,7 @@ async function getSnapshotBufferMap(notesId) {
 
 async function deleteSnapshotsByNotesId(notesId) {
     try {
-        const snapshotsFilePath = path.join(SNAPSHOTS_DIR, notesId);
+        const snapshotsFilePath = path.join(PATHS.SNAPSHOTS_DIR, notesId);
         console.log("snapshotsFilePath", snapshotsFilePath);
         const snapshotsExist = await fileExists(snapshotsFilePath);
 
@@ -174,10 +174,10 @@ async function deleteSnapshotsByNotesId(notesId) {
 
 async function deleteSnapshotFromNote(notesIdList) {
     try {
-        await ensureDir(SNAPSHOTS_DIR);
+        await ensureDir(PATHS.SNAPSHOTS_DIR);
         for (const notesId of notesIdList) {
             console.log("deleteSnapshotFromNote | notesId: ", notesId);
-            const snapshotsFilePath = path.join(SNAPSHOTS_DIR, notesId);
+            const snapshotsFilePath = path.join(PATHS.SNAPSHOTS_DIR, notesId);
             const snapshotsExist = await fileExists(snapshotsFilePath);
 
             if (snapshotsExist) {

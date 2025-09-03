@@ -17,7 +17,9 @@ import {
     deleteVideoFile,
     deleteVideoRecord,
 } from "./utils/youtubeVideo.utils";
-import { METADATA_DIR, SNAPSHOTS_DIR, VIDEOS_DIR } from "../const";
+
+import { PATHS } from "../const";
+
 import {
     ensureDir,
     fileExists,
@@ -89,17 +91,22 @@ const createWindow = async () => {
 
 // IPC ENDPOINTS
 ipcMain.handle("get-all-metadata", async () => {
-    await Promise.all([ensureDir(METADATA_DIR), ensureDir(VIDEOS_DIR)]);
-    const entries = await fsp.readdir(METADATA_DIR, { withFileTypes: true });
+    await Promise.all([
+        ensureDir(PATHS.METADATA_DIR),
+        ensureDir(PATHS.VIDEOS_DIR),
+    ]);
+    const entries = await fsp.readdir(PATHS.METADATA_DIR, {
+        withFileTypes: true,
+    });
     const jsonFiles = entries
         .filter((e) => e.isFile() && e.name.toLowerCase().endsWith(".json"))
         .map((e) => e.name);
 
     const items = await Promise.all(
         jsonFiles.map(async (filename) => {
-            const jsonPath = path.join(METADATA_DIR, filename);
+            const jsonPath = path.join(PATHS.METADATA_DIR, filename);
             const baseId = filename.replace(/\.json$/i, "");
-            const videoPath = path.join(VIDEOS_DIR, `${baseId}.mp4`);
+            const videoPath = path.join(PATHS.VIDEOS_DIR, `${baseId}.mp4`);
             const [raw, hasVideo] = await Promise.all([
                 fsp.readFile(jsonPath, "utf8"),
                 fileExists(videoPath),
@@ -127,8 +134,13 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             console.log("Invalid YouTube URL:", videoUrl);
             return null;
         }
-        await ensureDir(METADATA_DIR);
-        await ensureDir(VIDEOS_DIR);
+        console.log(
+            "add-current-video | PATHS.METADATA_DIR",
+            PATHS.METADATA_DIR
+        );
+        console.log("add-current-video | PATHS.VIDEOS_DIR", PATHS.VIDEOS_DIR);
+        await ensureDir(PATHS.METADATA_DIR);
+        await ensureDir(PATHS.VIDEOS_DIR);
 
         let videoId = store.get("yt." + youtubeVideoId);
         let videoMetadata = {};
@@ -138,7 +150,10 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
 
         if (videoId) {
             console.log("video exists!");
-            videoMetadataFilePath = path.join(METADATA_DIR, `${videoId}.json`);
+            videoMetadataFilePath = path.join(
+                PATHS.METADATA_DIR,
+                `${videoId}.json`
+            );
             const raw = await fsp.readFile(videoMetadataFilePath, "utf8");
             try {
                 videoMetadata = JSON.parse(raw);
@@ -259,7 +274,7 @@ ipcMain.handle("create-new-notes", async (_, videoId) => {
             return null;
         }
         const { id } = newNotes;
-        const snapshotPath = path.join(SNAPSHOTS_DIR, id);
+        const snapshotPath = path.join(PATHS.SNAPSHOTS_DIR, id);
         await ensureDir(snapshotPath);
         const newNotesContents = await writeNotesItem(id, []);
         if (!newNotesContents) {
@@ -545,6 +560,26 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
     createWindow();
+    const rootDataPath = app.getPath("userData");
+
+    // Check if the folder exists
+    if (!fs.existsSync(rootDataPath)) {
+        fs.mkdirSync(rootDataPath, { recursive: true });
+    }
+    PATHS.USER_DATA_BASE = path.join(rootDataPath, "user_data");
+    console.log("PATHS.USER_DATA_BASE", PATHS.USER_DATA_BASE);
+    PATHS.METADATA_DIR = path.join(PATHS.USER_DATA_BASE, "metadata");
+    console.log("PATHS.METADATA_DIR", PATHS.METADATA_DIR);
+
+    PATHS.VIDEOS_DIR = path.join(PATHS.USER_DATA_BASE, "videos");
+    PATHS.NOTES_DIR = path.join(PATHS.USER_DATA_BASE, "notes");
+    PATHS.NOTES_ITEM_DIR = path.join(PATHS.USER_DATA_BASE, "notes_items");
+    PATHS.SNAPSHOTS_DIR = path.join(PATHS.USER_DATA_BASE, "snapshots");
+    PATHS.TRANSCRIPTS_DIR = path.join(PATHS.USER_DATA_BASE, "transcripts");
+    PATHS.TIMESTAMPED_TRANSCRIPTS_DIR = path.join(
+        PATHS.USER_DATA_BASE,
+        "timestamped_transcripts"
+    );
 
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.

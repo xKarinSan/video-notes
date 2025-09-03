@@ -1,5 +1,5 @@
 import fsp from "node:fs/promises";
-import { METADATA_DIR, NOTES_DIR, VIDEOS_DIR } from "../../const";
+import { PATHS } from "../../const";
 import path from "node:path";
 import { NotesMetadata } from "../classes/Notes";
 
@@ -19,7 +19,7 @@ async function fileExists(directory) {
 async function getVideoMetadataById(videoId) {
     try {
         const videoMetadataDirectory = path.join(
-            METADATA_DIR,
+            PATHS.METADATA_DIR,
             `${videoId}.json`
         );
         const metadataExists = await fileExists(videoMetadataDirectory);
@@ -39,7 +39,7 @@ async function getVideoMetadataById(videoId) {
 
 async function getVideoPathById(videoId) {
     try {
-        const videoFileDirectory = path.join(VIDEOS_DIR, `${videoId}.mp4`);
+        const videoFileDirectory = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
         const videoFileExists = await fileExists(videoFileDirectory);
         if (!videoFileExists) {
             return null;
@@ -52,7 +52,7 @@ async function getVideoPathById(videoId) {
 
 async function getNotesMetadataById(notesId) {
     try {
-        const notesMetadataDirectory = path.join(NOTES_DIR, `${notesId}.json`);
+        const notesMetadataDirectory = path.join(PATHS.NOTES_DIR, `${notesId}.json`);
         const notesMetadataExists = await fileExists(notesMetadataDirectory);
 
         if (!notesMetadataExists) {
@@ -71,7 +71,7 @@ async function getNotesMetadataById(notesId) {
 
 async function getAllNotesMetadata() {
     try {
-        const files = await fsp.readdir(NOTES_DIR);
+        const files = await fsp.readdir(PATHS.NOTES_DIR);
         const notesMetadataList: NotesMetadata[] = [];
 
         for (const file of files) {

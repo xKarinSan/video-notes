@@ -1,6 +1,6 @@
 import fsp from "node:fs/promises";
 import path from "node:path";
-import { TRANSCRIPTS_DIR, TIMESTAMPED_TRANSCRIPTS_DIR } from "../../const";
+import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
 import { TranscriptResponse } from "youtube-transcript-plus/dist/types";
 
@@ -10,10 +10,10 @@ async function writeTranscript(
 ) {
     try {
         let transcriptText = "";
-        await ensureDir(TRANSCRIPTS_DIR);
-        await ensureDir(TIMESTAMPED_TRANSCRIPTS_DIR);
+        await ensureDir(PATHS.TRANSCRIPTS_DIR);
+        await ensureDir(PATHS.TIMESTAMPED_TRANSCRIPTS_DIR);
         const timestampedTranscriptFilePath = path.join(
-            TIMESTAMPED_TRANSCRIPTS_DIR,
+            PATHS.TIMESTAMPED_TRANSCRIPTS_DIR,
             `${videoId}.json`
         );
         const transcriptString = JSON.stringify(transcript, null, 2);
@@ -23,7 +23,7 @@ async function writeTranscript(
             transcriptText += transcriptItem.text + " ";
         });
         const transcriptTextFilePath = path.join(
-            TRANSCRIPTS_DIR,
+            PATHS.TRANSCRIPTS_DIR,
             `${videoId}.txt`
         );
         await fsp.writeFile(transcriptTextFilePath, transcriptText);
@@ -36,10 +36,10 @@ async function writeTranscript(
 
 async function deleteTranscript(videoId) {
     try {
-        await ensureDir(TRANSCRIPTS_DIR);
-        await ensureDir(TIMESTAMPED_TRANSCRIPTS_DIR);
+        await ensureDir(PATHS.TRANSCRIPTS_DIR);
+        await ensureDir(PATHS.TIMESTAMPED_TRANSCRIPTS_DIR);
         const timestampedTranscriptFilePath = path.join(
-            TIMESTAMPED_TRANSCRIPTS_DIR,
+            PATHS.TIMESTAMPED_TRANSCRIPTS_DIR,
             `${videoId}.json`
         );
         const timestampedTranscriptExists = await fileExists(
@@ -49,7 +49,7 @@ async function deleteTranscript(videoId) {
             await fsp.unlink(timestampedTranscriptFilePath);
         }
         const transcriptTextFilePath = path.join(
-            TRANSCRIPTS_DIR,
+            PATHS.TRANSCRIPTS_DIR,
             `${videoId}.txt`
         );
         const transcriptTextExists = await fileExists(transcriptTextFilePath);
@@ -65,7 +65,7 @@ async function deleteTranscript(videoId) {
 
 async function getTextTranscript(videoId) {
     const videoTranscriptTextPath = path.join(
-        TRANSCRIPTS_DIR,
+        PATHS.TRANSCRIPTS_DIR,
         `${videoId}.txt`
     );
     const videoTranscriptExists = await fsp

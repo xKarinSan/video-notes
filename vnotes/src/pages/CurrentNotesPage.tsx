@@ -216,7 +216,9 @@ function CurrentNotesPage() {
             videoTitle: currentVideo?.name ?? "N/A",
             videoUrl: currentVideo?.videoUrl ?? "N/A",
         };
-        await buildPdf(notesHeading, currentNotes);
+        await buildPdf(notesHeading, currentNotes).then(() => {
+            toast.success("PDF exported successfully.");
+        });
     }
 
     async function deleteCurrentNotes() {

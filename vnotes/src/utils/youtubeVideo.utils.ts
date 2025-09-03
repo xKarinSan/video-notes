@@ -3,7 +3,7 @@ import https from "node:https";
 import fsp from "node:fs/promises";
 import fs from "node:fs";
 
-import { METADATA_DIR, VIDEOS_DIR } from "../../const";
+import { PATHS } from "../../const";
 import { fileExists, getVideoMetadataById } from "./files.utils";
 
 function getYoutubeVideoId(url) {
@@ -37,7 +37,7 @@ function getYoutubeVideoId(url) {
 
 async function downloadVideoMetadata(videoMetadata, videoId) {
     try {
-        let videoMetadataFilePath = path.join(METADATA_DIR, `${videoId}.json`);
+        let videoMetadataFilePath = path.join(PATHS.METADATA_DIR, `${videoId}.json`);
         let json_string = JSON.stringify(videoMetadata, null, 2);
         await fsp.writeFile(videoMetadataFilePath, json_string);
         return true;
@@ -48,7 +48,7 @@ async function downloadVideoMetadata(videoMetadata, videoId) {
 
 async function downloadVideoFile(streamingUrl, videoId) {
     return new Promise((resolve) => {
-        const videoPath = path.join(VIDEOS_DIR, `${videoId}.mp4`);
+        const videoPath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
         const fileStream = fs.createWriteStream(videoPath);
 
         const req = https.get(
@@ -84,7 +84,7 @@ async function downloadVideoFile(streamingUrl, videoId) {
 async function deleteVideoMetadata(videoId) {
     try {
         const videoMetadataFilePath = path.join(
-            METADATA_DIR,
+            PATHS.METADATA_DIR,
             `${videoId}.json`
         );
         if (await fileExists(videoMetadataFilePath)) {
@@ -98,7 +98,7 @@ async function deleteVideoMetadata(videoId) {
 
 async function deleteVideoFile(videoId) {
     try {
-        const videoFilePath = path.join(VIDEOS_DIR, `${videoId}.mp4`);
+        const videoFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
         if (await fileExists(videoFilePath)) {
             await fsp.unlink(videoFilePath);
         }

@@ -1,7 +1,7 @@
 import path from "node:path";
 import fsp from "node:fs/promises";
 import { NotesMetadata } from "../classes/Notes";
-import { NOTES_DIR } from "../../const";
+import { PATHS } from "../../const";
 import { randomUUID } from "node:crypto";
 import {
     ensureDir,
@@ -21,9 +21,9 @@ async function createNotesMetadata(videoId) {
             createdDate: Date.now(),
             lastEdited: -1,
         };
-        await ensureDir(NOTES_DIR);
+        await ensureDir(PATHS.NOTES_DIR);
 
-        let notesMetadataFilePath = path.join(NOTES_DIR, `${notesId}.json`);
+        let notesMetadataFilePath = path.join(PATHS.NOTES_DIR, `${notesId}.json`);
         let notesMetadataString = JSON.stringify(notesMetadata, null, 2);
 
         await fsp.writeFile(notesMetadataFilePath, notesMetadataString);
@@ -43,7 +43,7 @@ async function createNotesMetadata(videoId) {
 async function saveNotesMetadata(notesId, notesMetadata) {
     try {
         notesMetadata.lastEdited = Date.now();
-        let notesMetadataFilePath = path.join(NOTES_DIR, `${notesId}.json`);
+        let notesMetadataFilePath = path.join(PATHS.NOTES_DIR, `${notesId}.json`);
         let notesMetadataString = JSON.stringify(notesMetadata, null, 2);
         await fsp.writeFile(notesMetadataFilePath, notesMetadataString);
         return true;
@@ -54,10 +54,10 @@ async function saveNotesMetadata(notesId, notesMetadata) {
 
 async function deleteNotesMetadata(notesIdList) {
     try {
-        await ensureDir(NOTES_DIR);
+        await ensureDir(PATHS.NOTES_DIR);
         for (const notesId of notesIdList) {
             const notesMetadataFilePath = path.join(
-                NOTES_DIR,
+                PATHS.NOTES_DIR,
                 `${notesId}.json`
             );
             const notesMetadataExists = await fsp
@@ -78,7 +78,7 @@ async function deleteNotesMetadata(notesIdList) {
 
 async function deleteNotesMetadataById(noteId) {
     try {
-        const notesMetadataFilePath = path.join(NOTES_DIR, `${noteId}.json`);
+        const notesMetadataFilePath = path.join(PATHS.NOTES_DIR, `${noteId}.json`);
         const notesMetadata: NotesMetadata = await getNotesMetadataById(noteId);
         if (!notesMetadata) {
             return false;
