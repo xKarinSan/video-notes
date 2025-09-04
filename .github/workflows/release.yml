@@ -8,7 +8,9 @@ on:
 defaults:
   run:
     working-directory: vnotes   #main path of desktop app
-
+env:
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  
 jobs:
   build:
     strategy:
