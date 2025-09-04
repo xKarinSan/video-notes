@@ -1,9 +1,12 @@
 name: App release
 
+
 on:
   push:
     tags: #trigger via the tag
       - "v*.*.*"
+permissions:
+  contents: write
 
 defaults:
   run:
@@ -11,8 +14,10 @@ defaults:
 env:
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
   
+
 jobs:
   build:
+    environment: PRODUCTION 
     strategy:
       fail-fast: false
       matrix:
