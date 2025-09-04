@@ -1,5 +1,9 @@
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import {
+    createBrowserRouter,
+    createHashRouter,
+    RouterProvider,
+} from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import Layout from "./Layout";
 import Homepage from "./pages/Homepage";
@@ -10,33 +14,22 @@ import CurrentVideoPage from "./pages/CurrentVideoPage";
 
 import "./index.css";
 
-const router = createBrowserRouter([
+const isDev = process.env.NODE_ENV === "development";
+
+const routes = [
     {
         element: <Layout />,
         children: [
-            {
-                path: "/",
-                element: <Homepage />,
-            },
-            {
-                path: "/videos",
-                element: <MainVideoPage />,
-            },
-            {
-                path: "/videos/:videoId",
-                element: <CurrentVideoPage />,
-            },
-            {
-                path: "/notes",
-                element: <MainNotesPage />,
-            },
-            {
-                path: "/notes/:notesId",
-                element: <CurrentNotesPage />,
-            },
+            { path: "/", element: <Homepage /> },
+            { path: "/videos", element: <MainVideoPage /> },
+            { path: "/videos/:videoId", element: <CurrentVideoPage /> },
+            { path: "/notes", element: <MainNotesPage /> },
+            { path: "/notes/:notesId", element: <CurrentNotesPage /> },
         ],
     },
-]);
+];
+
+const router = isDev ? createBrowserRouter(routes) : createHashRouter(routes);
 
 const container = document.getElementById("root");
 const root = createRoot(container);

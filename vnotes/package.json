@@ -45,7 +45,6 @@
     "@langchain/textsplitters": "^0.1.0",
     "@radix-ui/themes": "^3.2.1",
     "@tailwindcss/vite": "^4.1.11",
-    "@vitejs/plugin-react": "^5.0.0",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^10.1.0",
     "jspdf": "^3.0.1",
