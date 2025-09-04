@@ -1,0 +1,49 @@
+name: App release
+
+on:
+  push:
+    tags: #trigger via the tag
+      - "v*.*.*"
+
+defaults:
+  run:
+    working-directory: vnotes   #main path of desktop app
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+        include:
+          - os: macos-latest
+            build_cmd: |
+              npx electron-forge publish --platform=darwin --arch=x64
+              npx electron-forge publish --platform=darwin --arch=arm64
+          - os: windows-latest
+            build_cmd: |
+              npx electron-forge publish --platform=win32 --arch=x64
+          - os: ubuntu-latest
+            build_cmd: |
+              sudo apt-get update
+              sudo apt-get install -y rpm fakeroot dpkg
+              npx electron-forge publish --platform=linux --arch=x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: vnotes/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Make + Publish
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: ${{ matrix.build_cmd }}
