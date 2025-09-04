@@ -6,6 +6,19 @@ module.exports = {
         asar: true,
     },
     rebuildConfig: {},
+    publishers: [
+        {
+            name: "@electron-forge/publisher-github",
+            config: {
+                repository: {
+                    owner: "xKarinSan",
+                    name: "video-notes",
+                },
+                draft: true,
+                prerelease: false,
+            },
+        },
+    ],
     makers: [
         {
             name: "@electron-forge/maker-squirrel",
