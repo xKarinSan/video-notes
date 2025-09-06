@@ -559,6 +559,16 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+    if (process.platform === "darwin") {
+        const iconPath = app.isPackaged
+            ? path.join(process.resourcesPath, "assets", "icon.png")
+            : path.join(".","assets", "icon.png");
+        try {
+            app.dock.setIcon(iconPath);
+        } catch (e) {
+            console.warn("Failed to set macOS dock icon:", iconPath, e);
+        }
+    }
     createWindow();
     const rootDataPath = app.getPath("userData");
 
@@ -567,9 +577,7 @@ app.whenReady().then(() => {
         fs.mkdirSync(rootDataPath, { recursive: true });
     }
     PATHS.USER_DATA_BASE = path.join(rootDataPath, "user_data");
-    console.log("PATHS.USER_DATA_BASE", PATHS.USER_DATA_BASE);
     PATHS.METADATA_DIR = path.join(PATHS.USER_DATA_BASE, "metadata");
-    console.log("PATHS.METADATA_DIR", PATHS.METADATA_DIR);
 
     PATHS.VIDEOS_DIR = path.join(PATHS.USER_DATA_BASE, "videos");
     PATHS.NOTES_DIR = path.join(PATHS.USER_DATA_BASE, "notes");

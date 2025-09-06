@@ -4,9 +4,4 @@ chroma
 
 user_data
 
-# transcripts_text
-# transcripts_json
-# metadata
-# results
-# summaries
-# cache.db
+.DS_Store
