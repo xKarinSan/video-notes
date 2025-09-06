@@ -3,17 +3,17 @@ name: App release
 
 on:
   push:
-    tags: #trigger via the tag
+    tags:
       - "v*.*.*"
+
 permissions:
   contents: write
 
 defaults:
   run:
-    working-directory: vnotes   #main path of desktop app
+    working-directory: vnotes
 env:
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-  
 
 jobs:
   build:
@@ -24,9 +24,11 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-latest]
         include:
           - os: macos-latest
-            build_cmd: |
-              npx electron-forge publish --platform=darwin --arch=x64
-              npx electron-forge publish --platform=darwin --arch=arm64
+            arch: x64
+            build_cmd: npx electron-forge publish --platform=darwin --arch=x64
+          - os: macos-latest
+            arch: arm64
+            build_cmd: npx electron-forge publish --platform=darwin --arch=arm64
           - os: windows-latest
             build_cmd: |
               npx electron-forge publish --platform=win32 --arch=x64
