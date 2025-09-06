@@ -8,7 +8,6 @@ async function writeNotesItem(notesId: string, notes: NotesItem[]) {
     try {
         await ensureDir(PATHS.NOTES_ITEM_DIR);
         const notesItemFilePath = path.join(PATHS.NOTES_ITEM_DIR, `${notesId}.json`);
-        console.log("notesItemFilePath", notesItemFilePath);
         notes.map((note: NotesItem) => {
             note.content = note.snapshotId ?? note.content;
         });
@@ -111,7 +110,6 @@ async function syncSnapshots(notesId, notesDetails, bufferDict) {
             const snapshotPath = path.join(currSnapshotsPath, `${id}.jpg`);
             saves.push(fsp.writeFile(snapshotPath, buffer));
         }
-
         await Promise.all(saves);
         return true;
     } catch (e) {
@@ -146,7 +144,6 @@ async function getSnapshotBufferMap(notesId) {
                     return [id, buf];
                 })
         );
-        console.log("getSnapshotBufferMap | entries", entries);
         return Object.fromEntries(entries); // { [snapshotId]: Buffer }
     } catch (e) {
         console.error("getSnapshotBufferMap | e", e);
@@ -157,9 +154,7 @@ async function getSnapshotBufferMap(notesId) {
 async function deleteSnapshotsByNotesId(notesId) {
     try {
         const snapshotsFilePath = path.join(PATHS.SNAPSHOTS_DIR, notesId);
-        console.log("snapshotsFilePath", snapshotsFilePath);
         const snapshotsExist = await fileExists(snapshotsFilePath);
-
         if (snapshotsExist) {
             // await fsp.unlink(snapshotsFilePath);
             await fsp.rm(snapshotsFilePath, { recursive: true, force: true });
@@ -176,10 +171,8 @@ async function deleteSnapshotFromNote(notesIdList) {
     try {
         await ensureDir(PATHS.SNAPSHOTS_DIR);
         for (const notesId of notesIdList) {
-            console.log("deleteSnapshotFromNote | notesId: ", notesId);
             const snapshotsFilePath = path.join(PATHS.SNAPSHOTS_DIR, notesId);
             const snapshotsExist = await fileExists(snapshotsFilePath);
-
             if (snapshotsExist) {
                 await fsp.rm(snapshotsFilePath, {
                     recursive: true,

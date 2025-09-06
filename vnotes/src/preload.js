@@ -13,7 +13,6 @@ async function dictToBufferMap(dict) {
         })
     );
     const res = Object.fromEntries(entries);
-    console.log("dictToBufferMap | entries ", res);
     return res;
 }
 function bufferDictToUrlMap(dict) {
@@ -24,7 +23,6 @@ function bufferDictToUrlMap(dict) {
         return [id, blobUrl];
     });
     const res = Object.fromEntries(entries);
-    console.log("bufferDictToUrlMap | res", res);
     return res;
 }
 
@@ -90,7 +88,6 @@ contextBridge.exposeInMainWorld("notes", {
         notesDetails,
         snapshotIdDict
     ) => {
-        console.log("snapshotIdDict", snapshotIdDict);
         const bufferDict = await dictToBufferMap(snapshotIdDict);
         return await ipcRenderer.invoke(
             "save-current-notes",
@@ -110,7 +107,6 @@ contextBridge.exposeInMainWorld("notes", {
         await ipcRenderer.invoke("delete-notes-record", notesId),
 
     generateAISummary: async (videoId) => {
-        console.log("generateAISummary | videoId", videoId);
         return await ipcRenderer.invoke("generate-ai-summary", videoId);
     },
 });
@@ -120,7 +116,6 @@ contextBridge.exposeInMainWorld("settings", {
         return await ipcRenderer.invoke("get-openai-key");
     },
     setOpenAIKey: async (openAiKey) => {
-        console.log("openAiKey", openAiKey);
         return await ipcRenderer.invoke("set-openai-key", openAiKey);
     },
 });

@@ -72,10 +72,6 @@ async function getTextTranscript(videoId) {
         .access(videoTranscriptTextPath)
         .then(() => true)
         .catch(() => false);
-    console.log(
-        "getTextTranscript | videoTranscriptExists",
-        videoTranscriptExists
-    );
     if (!videoTranscriptExists) {
         return null;
     }
@@ -83,10 +79,6 @@ async function getTextTranscript(videoId) {
     const notesItemContent = await fsp.readFile(
         videoTranscriptTextPath,
         "utf-8"
-    );
-    console.log(
-        "getTextTranscript | notesItemContent",
-        videoTranscriptExists
     );
     return notesItemContent;
 }

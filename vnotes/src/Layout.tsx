@@ -2,7 +2,7 @@ import { Link, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
 function Layout() {
     const [apiKey, setApiKey] = useState("");
-    const [showKey, setShowKey] = useState(true);
+    const [showKey, setShowKey] = useState(false);
 
     useEffect(() => {
         loadApiKey();

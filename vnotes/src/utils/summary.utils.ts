@@ -53,8 +53,6 @@ async function summariseCombinedSummaries(chunks: string[], openAiKey: string) {
     3) combine the summaries from 1 and then summarise again. (take in the OpenAI key from the main process)
     3) return the ultimate summary in a string array. 1 item = 1 paragraph
 */
-    console.log("summariseCombinedSummaries | openAiKey", openAiKey);
-
     const perChunkSummaries = await summariseAllChunks(chunks, openAiKey);
     const model = new ChatOpenAI({
         model: "gpt-3.5-turbo",

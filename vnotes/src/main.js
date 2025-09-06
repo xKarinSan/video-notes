@@ -62,11 +62,16 @@ let store = null;
 let mainWindow = null;
 
 const createWindow = async () => {
+    // const iconPath = app.isPackaged
+    //     ? path.join(process.resourcesPath, "assets", "icon.png")
+    //     : path.join(".", "assets", "icon.png");
+        
     // Create the browser window.
     store = new Store();
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
+        // icon: iconPath,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
         },
@@ -129,16 +134,9 @@ ipcMain.handle("get-all-metadata", async () => {
 ipcMain.handle("add-current-video", async (_, videoUrl) => {
     try {
         const youtubeVideoId = getYoutubeVideoId(videoUrl);
-        console.log(youtubeVideoId);
         if (!youtubeVideoId) {
-            console.log("Invalid YouTube URL:", videoUrl);
             return null;
         }
-        console.log(
-            "add-current-video | PATHS.METADATA_DIR",
-            PATHS.METADATA_DIR
-        );
-        console.log("add-current-video | PATHS.VIDEOS_DIR", PATHS.VIDEOS_DIR);
         await ensureDir(PATHS.METADATA_DIR);
         await ensureDir(PATHS.VIDEOS_DIR);
 
@@ -149,7 +147,6 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
         let videoMetadataFilePath = "";
 
         if (videoId) {
-            console.log("video exists!");
             videoMetadataFilePath = path.join(
                 PATHS.METADATA_DIR,
                 `${videoId}.json`
@@ -163,7 +160,6 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
                 videoMetadata = null;
             }
             res.videoMetadata = videoMetadata;
-            console.log("res", res);
             return res;
         }
 
@@ -188,20 +184,17 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             streamingUrl,
             videoId
         );
-        console.log("isVideoDownloaded? ", isVideoDownloaded);
         let transcript = [];
 
         await fetchTranscript(youtubeVideoId).then((res) => {
             transcript = res;
         });
         const savedTranscript = await writeTranscript(videoId, transcript);
-        console.log("savedTranscript? ", savedTranscript);
 
         // download the metadata
         const largestThumbnail = thumbnails[thumbnails.length - 1];
         const uploadDateInMs = new Date(uploadDate).getTime();
         const opName = author.name;
-        console.log("video_url", video_url);
         videoMetadata = {
             id: videoId,
             videoUrl: video_url,
@@ -219,7 +212,6 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             videoMetadata,
             videoId
         );
-        console.log("isMetadataDownloaded? ", isMetadataDownloaded);
 
         if (
             !(
@@ -246,7 +238,6 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
         store.set("yt." + youtubeVideoId, videoId);
         store.set("vd." + videoId, youtubeVideoId);
         res.videoMetadata = videoMetadata;
-        console.log("res", res);
         return res;
     } catch (e) {
         console.log("add-current-video :", e);
@@ -289,13 +280,10 @@ ipcMain.handle("create-new-notes", async (_, videoId) => {
 ipcMain.handle("get-current-notes", async (_, notesId) => {
     try {
         const currentNotesMetadata = await getNotesMetadataById(notesId);
-        console.log("currentNotesMetadata", currentNotesMetadata);
         if (!currentNotesMetadata) {
             return null;
         }
         const currentNotes = await readNotesItem(notesId);
-        console.log("currentNotes", currentNotes);
-
         if (!currentNotes) {
             return null;
         }
@@ -303,22 +291,17 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
         // get all snapshots contents and convert to buffer
         // snapshot path: notes_snapshot
         const snapshotBuffer = await getSnapshotBufferMap(notesId);
-        console.log("snapshots");
         if (!snapshotBuffer) {
             return null;
         }
 
         const { videoId } = currentNotesMetadata;
         const videoMetadata = await getVideoMetadataById(videoId);
-        console.log("videoMetadata", videoMetadata);
-
         if (!videoMetadata) {
             return null;
         }
 
         const videoFilePath = await getVideoPathById(videoId);
-        console.log("videoFilePath", videoFilePath);
-
         if (
             !(
                 videoMetadata &&
@@ -332,7 +315,6 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
         }
 
         const buffer = fs.readFileSync(videoFilePath);
-        console.log();
         return {
             videoMetadata: videoMetadata,
             notesMetadata: currentNotesMetadata,
@@ -433,11 +415,6 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
             deleteSnapshotFromNote(notesIdList),
             deleteTranscript(videoId),
         ]);
-        console.log("notesContentsDeleted", notesContentsDeleted);
-        console.log("notesDeleted", notesDeleted);
-        console.log("recordDeleted", recordDeleted);
-        console.log("snapshotsDeleted", snapshotsDeleted);
-        console.log("transcriptsDeleted", transcriptsDeleted);
         if (
             !notesDeleted ||
             !recordDeleted ||
@@ -490,7 +467,6 @@ ipcMain.handle("get-openai-key", async () => {
 });
 ipcMain.handle("set-openai-key", async (_, openAiKey) => {
     try {
-        console.log("set-openai-key | openAiKey", openAiKey);
         await store.set("settings.open_ai_key", openAiKey);
         return true;
     } catch (e) {
@@ -517,7 +493,6 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
         */
         let res = [];
         let videoTranscript = await getTextTranscript(videoId);
-        console.log("generate-ai-summary | videoTranscript", videoTranscript);
         if (!videoTranscript) {
             return null;
         }
@@ -526,12 +501,10 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
             return null;
         }
         let chunks = await splitToChunks(videoTranscript);
-        console.log("generate-ai-summary | chunks", chunks);
         if (!chunks) {
             return null;
         }
         let summary = await summariseCombinedSummaries(chunks, openAIKey);
-        console.log("generate-ai-summary | summary", summary);
         if (!summary) {
             return null;
         }
@@ -546,7 +519,6 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
                 },
             ];
         });
-        console.log("generate-ai-summary | res", res);
         return res;
     } catch (e) {
         console.log("generate-ai-summary | e", e);
@@ -562,12 +534,8 @@ app.whenReady().then(() => {
     if (process.platform === "darwin") {
         const iconPath = app.isPackaged
             ? path.join(process.resourcesPath, "assets", "icon.png")
-            : path.join(".","assets", "icon.png");
-        try {
-            app.dock.setIcon(iconPath);
-        } catch (e) {
-            console.warn("Failed to set macOS dock icon:", iconPath, e);
-        }
+            : path.join(".", "assets", "icon.png");
+        app.dock.setIcon(iconPath);
     }
     createWindow();
     const rootDataPath = app.getPath("userData");

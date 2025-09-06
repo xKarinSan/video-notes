@@ -18,8 +18,7 @@ function MainNotesPage() {
                 const allNotes = await window.notes.getAllNotesMetadata();
                 setNotesMetadataList(allNotes);
             } catch (e) {
-                console.log("E", e);
-                console.error(e);
+                console.log("e", e);
             } finally {
                 setLoading(false);
             }

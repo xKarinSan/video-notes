@@ -176,14 +176,12 @@ function CurrentNotesPage() {
             if (!currentVideo || !currentVideo.id) return;
             setIsGeneratingSummary(true);
             const res = await window.notes.generateAISummary(currentVideo.id);
-            console.log("generateAiSummary | res", res);
             setIsGeneratingSummary(false);
             if (!(res && res.length > 0)) {
                 throw new Error(
                     "No AI summary generated for the current video."
                 );
             }
-            console.log("generateAiSummary | res", res);
             setCurrentNotes((prevNotes) =>
                 [...prevNotes, ...res].sort((a, b) => a.timestamp - b.timestamp)
             );

@@ -155,7 +155,6 @@ function generateText(
     const marginX = 10;
     const marginY = 20;
     doc.setFontSize = 14;
-    console.log("generateText | noteItem.content", noteItem.content);
     const bottomMargin = 10;
     const lineHeight = doc.getFontSize() / doc.internal.scaleFactor;
     currentPageHeight += lineHeight;
@@ -163,10 +162,8 @@ function generateText(
         noteItem.timestamp > -1
             ? `   [${formatTimestamp(noteItem.timestamp)}]`
             : "   ";
-    console.log("generateText | timestampPrefix", timestampPrefix);
     const contents = timestampPrefix + noteItem.content;
     const lines = doc.splitTextToSize(contents, pageWidth - 20);
-    console.log("generateText | lines", lines);
     for (const line of lines) {
         if (currentPageHeight + lineHeight > pageHeight - bottomMargin) {
             doc.addPage();
