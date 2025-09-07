@@ -24,11 +24,9 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-latest]
         include:
           - os: macos-latest
-            arch: x64
-            build_cmd: npx electron-forge publish --platform=darwin --arch=x64
-          - os: macos-latest
-            arch: arm64
-            build_cmd: npx electron-forge publish --platform=darwin --arch=arm64
+            build_cmd: |
+              npx electron-forge publish --platform=darwin --arch=x64
+              npx electron-forge publish --platform=darwin --arch=arm64
           - os: windows-latest
             build_cmd: |
               npx electron-forge publish --platform=win32 --arch=x64
