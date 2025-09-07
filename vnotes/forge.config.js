@@ -6,6 +6,7 @@ module.exports = {
         asar: true,
         icon: path.resolve(__dirname, "assets/icon"),
         extraResource: [path.resolve(__dirname, "assets")],
+        executableName: "vnotes"
     },
     rebuildConfig: {},
     publishers: [
