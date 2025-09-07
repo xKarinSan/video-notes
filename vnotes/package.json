@@ -1,8 +1,8 @@
 {
   "name": "vnotes",
-  "productName": "vnotes",
+  "productName": "VNotes",
   "version": "1.0.0",
-  "description": "VNotes - Watch. Snap. Replay. Learn.",
+  "description": "Watch. Snap. Replay. Learn.",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",

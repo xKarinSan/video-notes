@@ -62,16 +62,17 @@ let store = null;
 let mainWindow = null;
 
 const createWindow = async () => {
-    // const iconPath = app.isPackaged
-    //     ? path.join(process.resourcesPath, "assets", "icon.png")
-    //     : path.join(".", "assets", "icon.png");
-        
+    console.log("createWindow | app.isPackaged", app.isPackaged);
+    const iconPath = app.isPackaged
+        ? path.join(process.resourcesPath, "assets", "icon.png")
+        : path.join(".", "assets", "icon.png");
+
     // Create the browser window.
     store = new Store();
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
-        // icon: iconPath,
+        icon: iconPath,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
         },
@@ -532,6 +533,8 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
     if (process.platform === "darwin") {
+        console.log("createWindow | app.isPackaged", app.isPackaged);
+
         const iconPath = app.isPackaged
             ? path.join(process.resourcesPath, "assets", "icon.png")
             : path.join(".", "assets", "icon.png");
