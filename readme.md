@@ -1,6 +1,6 @@
-# 🎥 Video Notes Agent
+# 🎥 VNotes
 
-**Automatically extract and summarize YouTube videos** using a Python-based agent powered by OpenAI's SDK.  
+**Watch. Snap. Replay. Learn.** using a Python-based agent powered by OpenAI's SDK.  
 Perfect for learners, developers, and anyone who wants to **save time while learning from videos**.
 
 ---
@@ -9,13 +9,12 @@ Perfect for learners, developers, and anyone who wants to **save time while lear
 
 - 🔍 Extracts metadata and full transcripts from YouTube videos  
 - 📝 Generates multiple note types from video transcripts:
-  - Summary  
-  - Content Overview  
-  - Explain Like I’m 12  
+  - Summary
+  - Content Overview (Coming soon)
+  - Explain Like I’m 12 (Coming soon)
 - 💾 Saves notes in both `.json` and `.txt` formats for fast local access  
 - ⚡ Designed for **read-heavy** workflows — generate once, reuse anytime  
-- ⚙️ Live demo available via [Bolt](https://video-notes-demo.netlify.app/) *(limited to one sample video)*
-
+- Generates interactable timestamps: Notes and snapshots, both which can be clicked to replay.
 ---
 
 ## ⚠️ Demo Limitations
@@ -32,27 +31,23 @@ The Bolt-based demo is a preview of the core experience:
 - 🖥️ Develop into a full **desktop app** — distraction-free, browser-free, offline-friendly  
 - 🧩 Stay **model-agnostic** — currently uses OpenAI, but easily swappable  
 - 👐 Embrace **open source** — extensible, hackable, and built with the community
-
 ---
 
 ## 🛠 Tech Stack
 
-- **Python** – main language  
-- **OpenAI Agent SDK** – core logic and orchestration
-- **Streamlit** – first prototype UI (might change in future) 
-- **Bolt.new** – demo interface and landing  
+- **Electron** – For the desktop app
+- **Typescript** - For the UI logic and helper functions
+- **React** - For the UI
+- **Langchain** - For the AI summary portion (will be improved in future)
 
 ---
 
-## 📁 Project Structure *(coming soon)*
-
+## 📁 Project Structure *General overview*
 ```
-video-notes-agent/
+video-notes/
 │
-├── data/         # Transcripts and generated notes
-├── ui/           # Streamlit and Bolt UIs
-├── utils/        # YouTube processing and helpers
-├── models/       # Note generation logic
+├── src/         # The actual agent
+├── ui/           # Streamlit UI
+├── vnotes/        # The main desktop app
 ├── README.md
-└── ...
 ```
