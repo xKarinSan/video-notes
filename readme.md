@@ -1,6 +1,6 @@
 # 🎥 VNotes
-
-**Watch. Snap. Replay. Learn.** using a Python-based agent powered by OpenAI's SDK.  
+It aims to streamline video-learning for video-learners that have limited time and feel that AI summaries alone are insufficient.
+**Watch. Snap. Replay. Learn.**
 Perfect for learners, developers, and anyone who wants to **save time while learning from videos**.
 
 ---
@@ -15,14 +15,6 @@ Perfect for learners, developers, and anyone who wants to **save time while lear
 - 💾 Saves notes in both `.json` and `.txt` formats for fast local access  
 - ⚡ Designed for **read-heavy** workflows — generate once, reuse anytime  
 - Generates interactable timestamps: Notes and snapshots, both which can be clicked to replay.
----
-
-## ⚠️ Demo Limitations
-
-The Bolt-based demo is a preview of the core experience:
-
-- Currently supports a **single demo video only**  
-- **Note type selection** is fixed *(custom options coming soon)*
 
 ---
 
