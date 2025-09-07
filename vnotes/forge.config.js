@@ -5,6 +5,7 @@ module.exports = {
     packagerConfig: {
         asar: true,
         icon: path.resolve(__dirname, "assets/icon"),
+        extraResource: [path.resolve(__dirname, "assets")],
     },
     rebuildConfig: {},
     publishers: [
@@ -28,11 +29,11 @@ module.exports = {
         {
             name: "@electron-forge/maker-zip",
             platforms: ["darwin"],
-            config: {},
+            config: { icon: path.resolve(__dirname, "assets/icon.icns") },
         },
         {
             name: "@electron-forge/maker-deb",
-            config: {},
+            config: { icon: path.resolve(__dirname, "assets/icon.png") },
         },
         {
             name: "@electron-forge/maker-rpm",
