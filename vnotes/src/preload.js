@@ -118,4 +118,5 @@ contextBridge.exposeInMainWorld("settings", {
     setOpenAIKey: async (openAiKey) => {
         return await ipcRenderer.invoke("set-openai-key", openAiKey);
     },
+    savePath: (path) => ipcRenderer.send("save-path", path)
 });

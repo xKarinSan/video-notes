@@ -62,7 +62,6 @@ let store = null;
 let mainWindow = null;
 
 const createWindow = async () => {
-    console.log("createWindow | app.isPackaged", app.isPackaged);
     const iconPath = app.isPackaged
         ? path.join(process.resourcesPath, "assets", "icon.png")
         : path.join(".", "assets", "icon.png");
@@ -78,20 +77,18 @@ const createWindow = async () => {
         },
     });
 
+    const lastPath = store.get("lastPath", "/");
     // and load the index.html of the app.
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-        mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+        mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL + lastPath);
     } else {
-        mainWindow.loadFile(
-            path.join(
-                __dirname,
-                `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`
-            )
+        const indexPath = path.join(
+            __dirname,
+            `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`
         );
+        const hash = lastPath.startsWith("/") ? lastPath.slice(1) : lastPath;
+        mainWindow.loadFile(indexPath, { hash });
     }
-
-    // Open the DevTools.
-    // mainWindow.webContents.openDevTools();
 };
 // HELPERS
 
@@ -477,21 +474,6 @@ ipcMain.handle("set-openai-key", async (_, openAiKey) => {
 
 ipcMain.handle("generate-ai-summary", async (_, videoId) => {
     try {
-        /*
-        1) retrieve the transcript first using videoId
-        2) retrieve the OpenAI API key -> if theres no key, return null
-        3) call splitToChunks to split the chunks
-        4) call summariseCombinedSummaries to get the ultimate summary (to be JSON)
-        5) call the notes contents which is at notesId
-        6) loop the results from step 4 and create a NotesItem instance such that:
-        - id: generate a new UUID
-        - isSnapshot: false 
-        - content: each item from step 4
-        - timestamp: -1 (no timestamp)
-        - snapshotId: null (do NOT fill this up)
-        7) call writeNotesItem to overwrite the contents
-
-        */
         let res = [];
         let videoTranscript = await getTextTranscript(videoId);
         if (!videoTranscript) {
@@ -526,6 +508,12 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
         return null;
     }
 });
++ipcMain.on("save-path", (_evt, p) => {
+    try {
+        const val = typeof p === "string" && p.length ? p : "/";
+        store?.set("lastPath", val);
+    } catch {}
+});
 
 // APP LIFECYCLE
 // This method will be called when Electron has finished
@@ -533,8 +521,6 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
     if (process.platform === "darwin") {
-        console.log("createWindow | app.isPackaged", app.isPackaged);
-
         const iconPath = app.isPackaged
             ? path.join(process.resourcesPath, "assets", "icon.png")
             : path.join(".", "assets", "icon.png");

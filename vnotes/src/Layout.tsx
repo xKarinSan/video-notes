@@ -1,12 +1,21 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 function Layout() {
+    const isDev = process.env.NODE_ENV === "development";
     const [apiKey, setApiKey] = useState("");
     const [showKey, setShowKey] = useState(false);
-
+    const loc = useLocation();
     useEffect(() => {
         loadApiKey();
     }, []);
+
+    useEffect(() => {
+        const toSave = isDev
+            ? loc.pathname + window.location.search + window.location.hash // BrowserRouter
+            : window.location.hash || "/"; // HashRouter (persists "#/...")
+
+        window.settings.savePath(toSave);
+    }, [loc]);
 
     function loadApiKey() {
         (async () => {
