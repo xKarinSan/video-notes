@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { fetchTranscript } from "youtube-transcript-plus";
-import { updateElectronApp } from "update-electron-app"
+import { updateElectronApp } from "update-electron-app";
 
 import path from "node:path";
 import fsp from "node:fs/promises";
@@ -55,7 +55,7 @@ import {
     summariseCombinedSummaries,
 } from "./utils/summary.utils";
 
-updateElectronApp();
+updateElectronApp({ repo: "xKarinSan/video-notes", updateInterval: "1 hour" });
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
