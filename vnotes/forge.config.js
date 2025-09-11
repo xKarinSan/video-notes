@@ -1,12 +1,56 @@
+require("dotenv").config();
 const { FusesPlugin } = require("@electron-forge/plugin-fuses");
 const { FuseV1Options, FuseVersion } = require("@electron/fuses");
 const path = require("path");
+
 module.exports = {
     packagerConfig: {
-        asar: true,
+        asar: {
+            unpack: "**/*.node", // native modules should not be inside asar
+            unpackDir: "assets", // ship assets as loose files (fast to pack & load)
+        },
+        ignore: [
+            /^\/\.git($|\/)/,
+            /^\/\.github($|\/)/,
+            /^\/\.idea($|\/)/,
+            /^\/\.vscode($|\/)/,
+            /^\/coverage($|\/)/,
+            /^\/test(s)?($|\/)/,
+            /^\/__tests__($|\/)/,
+            /^\/docs?($|\/)/,
+            /^\/demo($|\/)/,
+            /^\/examples?($|\/)/,
+            /(^|\/)\.env(\..*)?$/,
+            /^\/README.*$/i,
+            /^\/CHANGELOG.*$/i,
+            /\.map$/,
+            /(^|\/)vite\..*\.mjs$/,
+            /(^|\/)tsconfig.*\.json$/,
+            // trim junk inside node_modules
+            /(^|\/)node_modules\/[^/]+\/(test|tests|__tests__|docs?|example(s)?|demo|benchmark(s)?)($|\/)/i,
+            /(^|\/)node_modules\/[^/]+\/(fixtures|samples)($|\/)/i,
+            /(^|\/)node_modules\/[^/]+\/.*\.(md|markdown|map|ts|tsx)$/i,
+        ],
+        prune: true,
         icon: path.resolve(__dirname, "assets/icon"),
         extraResource: [path.resolve(__dirname, "assets")],
-        executableName: "vnotes"
+        executableName: "vnotes",
+        osxSign: {
+            identity: process.env.MAC_CODESIGN_IDENTITY,
+            "hardened-runtime": true,
+            entitlements: path.resolve(__dirname, "entitlements.plist"),
+            "entitlements-inherit": path.resolve(
+                __dirname,
+                "entitlements.plist"
+            ),
+            "signature-flags": "library",
+        },
+
+        osxNotarize: {
+            appleId: process.env.APPLE_ID,
+            appleIdPassword: process.env.APPLE_PASSWORD,
+            teamId: process.env.APPLE_TEAM_ID,
+        },
     },
     rebuildConfig: {},
     publishers: [
@@ -73,7 +117,7 @@ module.exports = {
         new FusesPlugin({
             version: FuseVersion.V1,
             [FuseV1Options.RunAsNode]: false,
-            [FuseV1Options.EnableCookieEncryption]: true,
+            [FuseV1Options.EnableCookieEncryption]: false,
             [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
             [FuseV1Options.EnableNodeCliInspectArguments]: false,
             [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,

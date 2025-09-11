@@ -1,6 +1,5 @@
 name: App release
 
-
 on:
   push:
     tags:
@@ -14,10 +13,14 @@ defaults:
     working-directory: vnotes
 env:
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  MAC_CODESIGN_IDENTITY: ${{ secrets.MAC_CODESIGN_IDENTITY }}
+  APPLE_ID: ${{ secrets.APPLE_ID }}
+  APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+  APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
 jobs:
   build:
-    environment: PRODUCTION 
+    environment: PRODUCTION
     strategy:
       fail-fast: false
       matrix:
