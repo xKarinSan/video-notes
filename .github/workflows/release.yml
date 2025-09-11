@@ -53,6 +53,27 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Setup signing keychain (macOS)
+        if: startsWith(matrix.os, 'macos')
+        env:
+          MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          set -euxo pipefail
+          CERT_P12="$RUNNER_TEMP/devid.p12"
+          echo "$MAC_CERT_P12_BASE64" | base64 --decode > "$CERT_P12"
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          security import "$CERT_P12" -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          # Make our keychain first in search list so codesign finds the identity
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain
+          # Allow codesign/xcodebuild to use the key without UI prompts
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
+          # Sanity: print identities so we can see the exact string to match
+          security find-identity -v -p codesigning || true
+
       - name: Make + Publish
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
