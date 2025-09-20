@@ -1,5 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+
 function Layout() {
     const isDev = process.env.NODE_ENV === "development";
     const [apiKey, setApiKey] = useState("");
@@ -30,6 +32,7 @@ function Layout() {
 
     function saveOpenAIApiKey() {
         window.settings.setOpenAIKey(apiKey);
+        toast.success("OpenAI API key saved.");
     }
     return (
         <>

@@ -1,7 +1,7 @@
 {
   "name": "vnotes",
   "productName": "VNotes",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Watch. Snap. Replay. Learn.",
   "main": ".vite/build/main.js",
   "scripts": {
