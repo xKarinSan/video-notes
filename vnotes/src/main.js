@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { fetchTranscript } from "youtube-transcript-plus";
-import { updateElectronApp,UpdateSourceType } from "update-electron-app";
+import { updateElectronApp, UpdateSourceType } from "update-electron-app";
 
 import path from "node:path";
 import fsp from "node:fs/promises";
@@ -55,15 +55,13 @@ import {
     summariseCombinedSummaries,
 } from "./utils/summary.utils";
 
-
 updateElectronApp({
-  updateSource: {
-    type: UpdateSourceType.ElectronPublicUpdateService,
-    repo: 'xKarinSan/video-notes'
-  },
-  updateInterval: '1 hour',
-
-})
+    updateSource: {
+        type: UpdateSourceType.ElectronPublicUpdateService,
+        repo: "xKarinSan/video-notes",
+    },
+    updateInterval: "1 hour",
+});
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
     app.quit();
@@ -139,7 +137,29 @@ ipcMain.handle("get-all-metadata", async () => {
     return items;
 });
 
-ipcMain.handle("add-current-video", async (_, videoUrl) => {
+ipcMain.handle("add-video-file", async (_, file) => {
+    /*
+    1) ensureDir -> metadata and videos
+    2) generate a random UUID of the video
+    3) Get the following info such that:
+
+    title -> file name
+    description -> leave blank
+    lengthSeconds -> duration of vide in seconds,
+    video_url -> the original path of the video (may be redundant)
+    uploadDate -> now
+    author -> name of the user in the OS
+    thumbnails -> use whisper for now
+
+    4) stream the data? -> stream the metadata into the file path
+    5) Get the transcript -> find a library
+    6) save the transcript (same as the youtube part)
+    7) call downloadVideoMetadata -> similar as the one in add-youtube-video
+    */
+
+});
+
+ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
     try {
         const youtubeVideoId = getYoutubeVideoId(videoUrl);
         if (!youtubeVideoId) {
@@ -248,7 +268,7 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
         res.videoMetadata = videoMetadata;
         return res;
     } catch (e) {
-        console.log("add-current-video :", e);
+        console.log("add-youtube-video :", e);
         return null;
     }
 });

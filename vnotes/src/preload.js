@@ -28,8 +28,12 @@ function bufferDictToUrlMap(dict) {
 
 contextBridge.exposeInMainWorld("api", {
     listMetadata: async () => await ipcRenderer.invoke("get-all-metadata"),
-    getVideodata: async (videoUrl) =>
-        await ipcRenderer.invoke("add-current-video", videoUrl),
+    addYoutubeVideo: async (videoUrl) =>
+        await ipcRenderer.invoke("add-youtube-video", videoUrl),
+
+    uploadVideoFile: async (videoMetadata) =>
+        await ipcRenderer.invoke("add-video-file", videoMetadata),
+
     getCurrentVideo: async (videoId) => {
         const result = await ipcRenderer.invoke("get-current-video", videoId);
         if (!result) return null;
@@ -118,5 +122,5 @@ contextBridge.exposeInMainWorld("settings", {
     setOpenAIKey: async (openAiKey) => {
         return await ipcRenderer.invoke("set-openai-key", openAiKey);
     },
-    savePath: (path) => ipcRenderer.send("save-path", path)
+    savePath: (path) => ipcRenderer.send("save-path", path),
 });

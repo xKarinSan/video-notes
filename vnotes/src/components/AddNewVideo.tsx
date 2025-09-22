@@ -8,21 +8,18 @@ type AddNewVideoProps = {
 function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     const [videoUrl, setVideoURL] = useState("");
     const [isUploading, setIsUploading] = useState(false);
-    async function addVideo() {
+    async function addYoutubeVideo() {
         try {
+            toast.info("Video uploading in progress...")
             setIsUploading(true);
-            // toast.info("Retrieving video data in progress ...");
-
-            const res = await window.api.getVideodata(videoUrl);
-
-            setIsUploading(false);
-
+            const res = await window.api.addYoutubeVideo(videoUrl);
             if (res) {
                 const { videoMetadata, existingVideo } = res;
                 if (existingVideo) {
                     toast.error("Video already exists!");
                 } else {
                     onVideoAdded?.(videoMetadata);
+                    setVideoURL("");
                     toast.success("Video added!");
                 }
                 return videoMetadata;
@@ -30,15 +27,25 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                 throw new Error("Video failed to add");
             }
         } catch (e) {
-            setIsUploading(false);
-            throw e;
+            toast.error(e);
+        }
+        finally{
+            setIsUploading(false)
         }
     }
-    function handleAddVideo() {
-        toast.promise(addVideo(), {
-            pending: "Adding video...",
-            error: "Failed to add video",
-        });
+
+    async function uploadVideoFile()
+    {
+        // Check if the video file is there
+        // If not there, toast.error -> No valid files found
+        // call the IPC endpoint to upload the video
+        // if successful then toast.success , else throw error
+
+    }
+
+    function handleFileUpload()
+    {
+        // get the input from the video file
     }
 
     return (
@@ -56,7 +63,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                         />
                         <button
                             className={"btn bg-blue-700 m-auto w-full mt-2"}
-                            onClick={() => handleAddVideo()}
+                            onClick={() => addYoutubeVideo()}
                             disabled={isUploading}
                         >
                             {isUploading ? "Adding..." : "Add Video"}
