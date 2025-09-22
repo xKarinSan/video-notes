@@ -169,6 +169,7 @@ function CurrentNotesPage() {
         canvas.width = 0;
         canvas.height = 0;
         canvas = null;
+        toast.success("Snapshot captured!");
     }
 
     async function generateAiSummary() {
