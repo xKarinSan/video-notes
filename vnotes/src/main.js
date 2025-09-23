@@ -48,7 +48,9 @@ import {
 import {
     deleteTranscript,
     getTextTranscript,
-    writeTranscript,
+    writeYoutubeTranscript,
+    writeTranscriptFallback,
+    writeFallbackTranscript,
 } from "./utils/transcripts.utils";
 import {
     splitToChunks,
@@ -97,6 +99,7 @@ const createWindow = async () => {
         const hash = lastPath.startsWith("/") ? lastPath.slice(1) : lastPath;
         mainWindow.loadFile(indexPath, { hash });
     }
+    mainWindow.webContents.openDevTools();
 };
 // HELPERS
 
@@ -156,7 +159,6 @@ ipcMain.handle("add-video-file", async (_, file) => {
     6) save the transcript (same as the youtube part)
     7) call downloadVideoMetadata -> similar as the one in add-youtube-video
     */
-
 });
 
 ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
@@ -212,12 +214,26 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
             streamingUrl,
             videoId
         );
-        let transcript = [];
+        let savedTranscript = false;
+        try {
+            let transcript = [];
 
-        await fetchTranscript(youtubeVideoId).then((res) => {
-            transcript = res;
-        });
-        const savedTranscript = await writeTranscript(videoId, transcript);
+            await fetchTranscript(youtubeVideoId).then((res) => {
+                transcript = res;
+            });
+            savedTranscript = await writeYoutubeTranscript(videoId, transcript);
+        } catch (e) {
+            console.log("add-youtube-video | e | before fallback", e);
+            const openAIKey = await store.get("settings.open_ai_key");
+            const transcriptText = await writeTranscriptFallback(
+                videoId,
+                openAIKey
+            );
+            savedTranscript = await writeFallbackTranscript(
+                videoId,
+                transcriptText
+            );
+        }
 
         // download the metadata
         const largestThumbnail = thumbnails[thumbnails.length - 1];
@@ -241,14 +257,7 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
             videoId
         );
 
-        if (
-            !(
-                isVideoDownloaded &&
-                isMetadataDownloaded &&
-                transcript &&
-                savedTranscript
-            )
-        ) {
+        if (!(isVideoDownloaded && isMetadataDownloaded && savedTranscript)) {
             // implement rollback
             if (!isVideoDownloaded) {
                 // rollback metadata

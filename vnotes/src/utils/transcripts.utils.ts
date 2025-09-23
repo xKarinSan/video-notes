@@ -1,10 +1,12 @@
 import fsp from "node:fs/promises";
+import fs from "node:fs";
 import path from "node:path";
 import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
 import { TranscriptResponse } from "youtube-transcript-plus/dist/types";
+import OpenAI, { Uploadable } from "openai";
 
-async function writeTranscript(
+async function writeYoutubeTranscript(
     videoId: string,
     transcript: TranscriptResponse[]
 ) {
@@ -83,4 +85,52 @@ async function getTextTranscript(videoId) {
     return notesItemContent;
 }
 
-export { writeTranscript, deleteTranscript, getTextTranscript };
+async function writeTranscriptFallback(videoId, openAIKey) {
+    try {
+        console.log("writeTranscriptFallback | started");
+        let openaiClient = new OpenAI({ apiKey: openAIKey });
+        // extract audio as mp3 (temporary)
+
+        const videoFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
+        // const videoContent = await fsp.readFile(videoFilePath);
+        const fileStream = fs.createReadStream(
+            videoFilePath
+        ) as unknown as Uploadable;
+
+        const { text } = await openaiClient.audio.transcriptions.create({
+            file: fileStream as unknown as Uploadable,
+            model: "whisper-1",
+        });
+        console.log("writeTranscriptFallback | transcript", text);
+        return text;
+    } catch (e) {
+        console.log("writeTranscriptFallback | e", e);
+        return null;
+    }
+}
+
+async function writeFallbackTranscript(videoId: string, transcript: string) {
+    try {
+        let transcriptText = "";
+        await ensureDir(PATHS.TRANSCRIPTS_DIR);
+        await ensureDir(PATHS.TIMESTAMPED_TRANSCRIPTS_DIR);
+
+        const transcriptTextFilePath = path.join(
+            PATHS.TRANSCRIPTS_DIR,
+            `${videoId}.txt`
+        );
+        await fsp.writeFile(transcriptTextFilePath, transcript);
+        return true;
+    } catch (e) {
+        console.error("writeTranscript | e", e);
+        return false;
+    }
+}
+
+export {
+    writeYoutubeTranscript,
+    deleteTranscript,
+    getTextTranscript,
+    writeTranscriptFallback,
+    writeFallbackTranscript,
+};
