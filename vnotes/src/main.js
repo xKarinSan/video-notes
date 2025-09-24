@@ -13,7 +13,8 @@ import fs from "node:fs";
 import {
     getYoutubeVideoId,
     downloadVideoMetadata,
-    downloadVideoFile,
+    downloadYoutubeVideoFile,
+    downloadUploadedVideoFile,
     deleteVideoMetadata,
     deleteVideoFile,
     deleteVideoRecord,
@@ -140,7 +141,7 @@ ipcMain.handle("get-all-metadata", async () => {
     return items;
 });
 
-ipcMain.handle("add-video-file", async (_, file) => {
+ipcMain.handle("add-video-file", async (_, videoBytes, videoFileName) => {
     /*
     1) ensureDir -> metadata and videos
     2) generate a random UUID of the video
@@ -159,6 +160,32 @@ ipcMain.handle("add-video-file", async (_, file) => {
     6) save the transcript (same as the youtube part)
     7) call downloadVideoMetadata -> similar as the one in add-youtube-video
     */
+    console.log("add-video-file");
+
+    await ensureDir(PATHS.METADATA_DIR);
+    await ensureDir(PATHS.VIDEOS_DIR);
+
+    const videoId = randomUUID();
+
+    // we have the video
+    // const videoMetadata = {
+    //     id: videoId,
+    //     videoUrl: "",
+    //     name: videoFileName,
+    //     description: "-",
+    //     dateExtracted: Date.now(),
+    //     thumbnail: "-",
+    //     dateUploaded: Date.now(),
+    //     opName: opName,
+    //     duration: parseInt(timestamp),
+    //     notesIdList: [],
+    // };
+
+    // download the video itself
+    const isVideoDownloaded = await downloadUploadedVideoFile(
+        videoBytes,
+        videoId
+    );
 });
 
 ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
@@ -210,7 +237,7 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
 
         // download the video itself
         const streamingUrl = format.url;
-        const isVideoDownloaded = await downloadVideoFile(
+        const isVideoDownloaded = await downloadYoutubeVideoFile(
             streamingUrl,
             videoId
         );

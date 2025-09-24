@@ -15,6 +15,14 @@ async function dictToBufferMap(dict) {
     const res = Object.fromEntries(entries);
     return res;
 }
+
+async function convertBlobToBytes(blobUrl) {
+    const res = await fetch(blobUrl);
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return buffer;
+}
+
 function bufferDictToUrlMap(dict) {
     const entries = Object.entries(dict).map(([id, bytes]) => {
         const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -31,8 +39,10 @@ contextBridge.exposeInMainWorld("api", {
     addYoutubeVideo: async (videoUrl) =>
         await ipcRenderer.invoke("add-youtube-video", videoUrl),
 
-    uploadVideoFile: async (videoMetadata) =>
-        await ipcRenderer.invoke("add-video-file", videoMetadata),
+    uploadVideoFile: async (videoFileUrl, videoFileName) => {
+        const videoBytes = await convertBlobToBytes(videoFileUrl);
+        await ipcRenderer.invoke("add-video-file", videoBytes, videoFileName);
+    },
 
     getCurrentVideo: async (videoId) => {
         const result = await ipcRenderer.invoke("get-current-video", videoId);

@@ -2,6 +2,7 @@ import path from "node:path";
 import https from "node:https";
 import fsp from "node:fs/promises";
 import fs from "node:fs";
+import { promises as pfs } from "fs";
 
 import { PATHS } from "../../const";
 import { fileExists, getVideoMetadataById } from "./files.utils";
@@ -37,7 +38,10 @@ function getYoutubeVideoId(url) {
 
 async function downloadVideoMetadata(videoMetadata, videoId) {
     try {
-        let videoMetadataFilePath = path.join(PATHS.METADATA_DIR, `${videoId}.json`);
+        let videoMetadataFilePath = path.join(
+            PATHS.METADATA_DIR,
+            `${videoId}.json`
+        );
         let json_string = JSON.stringify(videoMetadata, null, 2);
         await fsp.writeFile(videoMetadataFilePath, json_string);
         return true;
@@ -46,7 +50,7 @@ async function downloadVideoMetadata(videoMetadata, videoId) {
     }
 }
 
-async function downloadVideoFile(streamingUrl, videoId) {
+async function downloadYoutubeVideoFile(streamingUrl, videoId) {
     return new Promise((resolve) => {
         const videoPath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
         const fileStream = fs.createWriteStream(videoPath);
@@ -59,7 +63,7 @@ async function downloadVideoFile(streamingUrl, videoId) {
                 },
             },
             (res) => {
-                console.log("downloadVideoFile | res", res);
+                console.log("downloadYoutubeVideoFile | res", res);
                 if (res.statusCode !== 200) {
                     res.resume();
                     fs.unlink(videoPath, () => resolve(false));
@@ -79,6 +83,23 @@ async function downloadVideoFile(streamingUrl, videoId) {
             fs.unlink(videoPath, () => resolve(false));
         });
     });
+}
+
+async function downloadUploadedVideoFile(videoBytes, videoId) {
+    try {
+        /*
+1. Get the bytes
+2. Get the path
+3. Write the bytes into the path
+        */
+
+        const videoPath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
+        await pfs.writeFile(videoPath, Buffer.from(videoBytes));
+        return true;
+    } catch (e) {
+        console.log("downloadUploadedVideoFile error", e);
+        return false;
+    }
 }
 
 async function deleteVideoMetadata(videoId) {
@@ -130,7 +151,8 @@ async function deleteVideoRecord(videoId) {
 export {
     getYoutubeVideoId,
     downloadVideoMetadata,
-    downloadVideoFile,
+    downloadYoutubeVideoFile,
+    downloadUploadedVideoFile,
     deleteVideoMetadata,
     deleteVideoFile,
     deleteVideoRecord,

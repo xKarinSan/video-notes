@@ -8,6 +8,7 @@ type AddNewVideoProps = {
 function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     const [youtubeVideoUrl, setYoutubeVideoURL] = useState("");
     const [uploadedFileUrl, setUploadedFileUrl] = useState("");
+    const [uploadedFileName, setUploadedFileName] = useState("");
 
     const [isUploading, setIsUploading] = useState(false);
     const fileUploadRef = useRef<HTMLInputElement>(null);
@@ -40,13 +41,14 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
 
     function cancelUploadFile() {
         setUploadedFileUrl("");
+        setUploadedFileName("");
         if (fileUploadRef.current) {
             fileUploadRef.current.value = "";
         }
         if (videoRef.current) {
             videoRef.current.pause();
-            videoRef.current.removeAttribute("src"); // detach source
-            videoRef.current.load(); // tell the element to reset
+            videoRef.current.removeAttribute("src");
+            videoRef.current.load();
         }
         toast.info("Cancelled");
     }
@@ -56,6 +58,41 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
         // If not there, toast.error -> No valid files found
         // call the IPC endpoint to upload the video
         // if successful then toast.success , else throw error
+        if (!uploadedFileUrl) {
+            toast.error("No valid video found.");
+            return;
+        }
+        try {
+            toast.info("Video uploading in progress...");
+            setIsUploading(true);
+            // just the metadata will do
+            const res = await window.api.uploadVideoFile(
+                uploadedFileUrl,
+                uploadedFileName
+            );
+            if (res) {
+                const { videoMetadata } = res;
+                onVideoAdded?.(videoMetadata);
+                setUploadedFileUrl("");
+                setUploadedFileName("");
+                if (fileUploadRef.current) {
+                    fileUploadRef.current.value = "";
+                }
+                if (videoRef.current) {
+                    videoRef.current.pause();
+                    videoRef.current.removeAttribute("src");
+                    videoRef.current.load();
+                }
+                toast.success("Video added!");
+                return videoMetadata;
+            } else {
+                throw new Error("Video failed to add");
+            }
+        } catch (e) {
+            toast.error(e);
+        } finally {
+            setIsUploading(false);
+        }
     }
 
     function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -67,6 +104,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
         const currentFile = files[0];
         const tempUrl = URL.createObjectURL(currentFile);
         setUploadedFileUrl(tempUrl);
+        setUploadedFileName(currentFile.name);
         toast.success("File successfully uploaded!");
     }
 
