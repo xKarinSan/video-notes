@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Video } from "../classes/Video";
 import { toast } from "react-toastify";
 type AddNewVideoProps = {
@@ -6,20 +6,25 @@ type AddNewVideoProps = {
 };
 
 function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
-    const [videoUrl, setVideoURL] = useState("");
+    const [youtubeVideoUrl, setYoutubeVideoURL] = useState("");
+    const [uploadedFileUrl, setUploadedFileUrl] = useState("");
+
     const [isUploading, setIsUploading] = useState(false);
+    const fileUploadRef = useRef<HTMLInputElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+
     async function addYoutubeVideo() {
         try {
-            toast.info("Video uploading in progress...")
+            toast.info("Video uploading in progress...");
             setIsUploading(true);
-            const res = await window.api.addYoutubeVideo(videoUrl);
+            const res = await window.api.addYoutubeVideo(youtubeVideoUrl);
             if (res) {
                 const { videoMetadata, existingVideo } = res;
                 if (existingVideo) {
                     toast.error("Video already exists!");
                 } else {
                     onVideoAdded?.(videoMetadata);
-                    setVideoURL("");
+                    setYoutubeVideoURL("");
                     toast.success("Video added!");
                 }
                 return videoMetadata;
@@ -28,24 +33,41 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
             }
         } catch (e) {
             toast.error(e);
-        }
-        finally{
-            setIsUploading(false)
+        } finally {
+            setIsUploading(false);
         }
     }
 
-    async function uploadVideoFile()
-    {
+    function cancelUploadFile() {
+        setUploadedFileUrl("");
+        if (fileUploadRef.current) {
+            fileUploadRef.current.value = "";
+        }
+        if (videoRef.current) {
+            videoRef.current.pause();
+            videoRef.current.removeAttribute("src"); // detach source
+            videoRef.current.load(); // tell the element to reset
+        }
+        toast.info("Cancelled");
+    }
+
+    async function uploadVideoFile() {
         // Check if the video file is there
         // If not there, toast.error -> No valid files found
         // call the IPC endpoint to upload the video
         // if successful then toast.success , else throw error
-
     }
 
-    function handleFileUpload()
-    {
+    function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
         // get the input from the video file
+        // get the temporary URL; turn it into binary cause smaller?
+        const files = e.target?.files;
+
+        if (files == null) return;
+        const currentFile = files[0];
+        const tempUrl = URL.createObjectURL(currentFile);
+        setUploadedFileUrl(tempUrl);
+        toast.success("File successfully uploaded!");
     }
 
     return (
@@ -54,19 +76,56 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                 <div className="card-body">
                     <h2 className="card-title">Add New Video</h2>
                     <p>
+                        <label>Youtube Video</label>
                         <input
                             type="text"
-                            placeholder="Type here"
+                            placeholder="Enter youtube URL"
                             className="input w-full"
-                            onChange={(e) => setVideoURL(e.target.value)}
-                            value={videoUrl}
+                            onChange={(e) => setYoutubeVideoURL(e.target.value)}
+                            value={youtubeVideoUrl}
                         />
                         <button
                             className={"btn bg-blue-700 m-auto w-full mt-2"}
                             onClick={() => addYoutubeVideo()}
                             disabled={isUploading}
                         >
-                            {isUploading ? "Adding..." : "Add Video"}
+                            {isUploading ? "Adding..." : "Add Youtube Video"}
+                        </button>
+                    </p>
+                    <label className="m-auto">or</label>
+                    <p>
+                        <label>User upload (MP4)</label>
+                        <input
+                            type="file"
+                            accept=".mp4"
+                            placeholder="Upload file"
+                            className="input w-full"
+                            multiple={false}
+                            ref={fileUploadRef}
+                            onChange={(e) => handleFileUpload(e)}
+                        />
+
+                        <video
+                            className="m-auto"
+                            hidden={uploadedFileUrl ? false : true}
+                            ref={videoRef}
+                            src={uploadedFileUrl}
+                            playsInline
+                            controls={true}
+                        ></video>
+                        <button
+                            className={"btn bg-blue-700 m-auto w-full mt-2"}
+                            onClick={() => uploadVideoFile()}
+                            disabled={isUploading}
+                        >
+                            {isUploading ? "Adding..." : "Upload"}
+                        </button>
+                        <button
+                            className={"btn bg-red-700 m-auto w-full mt-2"}
+                            onClick={() => cancelUploadFile()}
+                            disabled={isUploading}
+                        >
+                            Cancel
                         </button>
                     </p>
                 </div>
