@@ -20,6 +20,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
             toast.info("Video uploading in progress...");
             setIsUploading(true);
             const res = await window.api.addYoutubeVideo(youtubeVideoUrl);
+            console.log("addYoutubeVideo | res",res);
             if (res) {
                 const { videoMetadata, existingVideo } = res;
                 if (existingVideo) {
@@ -34,6 +35,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                 throw new Error("Video failed to add");
             }
         } catch (e) {
+            console.log("addYoutubeVideo | e", e);
             toast.error(e);
         } finally {
             setIsUploading(false);
@@ -73,6 +75,8 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                 uploadedFileName,
                 uploadVideoDuration
             );
+            console.log("uploadVideoFile | res", res);
+
             if (res) {
                 const { videoMetadata } = res;
                 onVideoAdded?.(videoMetadata);
@@ -92,6 +96,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                 throw new Error("Video failed to add");
             }
         } catch (e) {
+            console.log("uploadVideoFile | e", e);
             toast.error(e);
         } finally {
             setIsUploading(false);

@@ -51,6 +51,8 @@ async function downloadVideoMetadata(videoMetadata, videoId) {
 }
 
 async function downloadYoutubeVideoFile(streamingUrl, videoId) {
+    console.log("downloadYoutubeVideoFile | streamingUrl", streamingUrl);
+    console.log("downloadYoutubeVideoFile | videoId", videoId);
     return new Promise((resolve) => {
         const videoPath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
         const fileStream = fs.createWriteStream(videoPath);
@@ -63,7 +65,11 @@ async function downloadYoutubeVideoFile(streamingUrl, videoId) {
                 },
             },
             (res) => {
-                console.log("downloadYoutubeVideoFile | res", res);
+                // console.log("downloadYoutubeVideoFile | res", res);
+                console.log(
+                    "downloadYoutubeVideoFile | res.statusCode",
+                    res.statusCode
+                );
                 if (res.statusCode !== 200) {
                     res.resume();
                     fs.unlink(videoPath, () => resolve(false));

@@ -193,12 +193,12 @@ ipcMain.handle(
             if (!isVideoDownloaded) {
                 throw Error("Video download failed!");
             }
-            // const openAIKey = await store.get("settings.open_ai_key");
-            // const transcriptText = await writeTranscriptFallback(videoId, openAIKey);
-            // savedTranscript = await writeFallbackTranscript(videoId, transcriptText);
-            // if (!transcriptText || !savedTranscript) {
-            //     throw Error("Transcript generation failed!");
-            // }
+            const openAIKey = await store.get("settings.open_ai_key");
+            const transcriptText = await writeTranscriptFallback(videoId, openAIKey);
+            const savedTranscript = await writeFallbackTranscript(videoId, transcriptText);
+            if (!transcriptText || !savedTranscript) {
+                throw Error("Transcript generation failed!");
+            }
 
             const uploadDateInMs = new Date().getTime();
             const videoMetadata = {
@@ -223,6 +223,7 @@ ipcMain.handle(
             }
             res.videoMetadata = videoMetadata;
             res.existingVideo = false;
+            console.log("add-video-file  | res", res);
             return res;
         } catch (e) {
             console.log("add-video-file :", e);
@@ -281,12 +282,15 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
 
         // download the video itself
         const streamingUrl = format.url;
+        console.log("BEFORE download call");
         const isVideoDownloaded = await downloadYoutubeVideoFile(
             streamingUrl,
             videoId
         );
+        console.log("AFTER download call");
         let savedTranscript = false;
         try {
+            console.log("add-youtube-video | try");
             let transcript = [];
 
             await fetchTranscript(youtubeVideoId).then((res) => {
@@ -305,6 +309,8 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
                 transcriptText
             );
         }
+        console.log("add-youtube-video | savedTranscript");
+        console.log("add-youtube-video-success");
 
         // download the metadata
         const largestThumbnail = thumbnails[thumbnails.length - 1];
@@ -328,24 +334,22 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
             videoId
         );
 
+        console.log("add-youtube-video | isVideoDownloaded", isVideoDownloaded);
+        console.log(
+            "add-youtube-video | isMetadataDownloaded",
+            isMetadataDownloaded
+        );
+
         if (!(isVideoDownloaded && isMetadataDownloaded && savedTranscript)) {
-            // implement rollback
-            if (!isVideoDownloaded) {
-                // rollback metadata
-                await deleteVideoMetadata(videoId);
-            }
-            if (!isMetadataDownloaded) {
-                // rollback video download
-                await deleteVideoFile(videoId);
-            }
-            if (!savedTranscript) {
-                await deleteTranscript(videoId);
-            }
+            await deleteVideoMetadata(videoId);
+            await deleteVideoFile(videoId);
+            await deleteTranscript(videoId);
             return null;
         }
         store.set("yt." + youtubeVideoId, videoId);
         store.set("vd." + videoId, youtubeVideoId);
         res.videoMetadata = videoMetadata;
+        console.log("add-youtube-video  | res", res);
         return res;
     } catch (e) {
         console.log("add-youtube-video :", e);

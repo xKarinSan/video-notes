@@ -36,12 +36,13 @@ function bufferDictToUrlMap(dict) {
 
 contextBridge.exposeInMainWorld("api", {
     listMetadata: async () => await ipcRenderer.invoke("get-all-metadata"),
-    addYoutubeVideo: async (videoUrl) =>
-        await ipcRenderer.invoke("add-youtube-video", videoUrl),
+    addYoutubeVideo: async (videoUrl) => {
+        return await ipcRenderer.invoke("add-youtube-video", videoUrl);
+    },
 
     uploadVideoFile: async (videoFileUrl, videoFileName, videoFileDuration) => {
         const videoBytes = await convertBlobToBytes(videoFileUrl);
-        await ipcRenderer.invoke(
+        return await ipcRenderer.invoke(
             "add-video-file",
             videoBytes,
             videoFileName,
