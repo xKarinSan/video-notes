@@ -9,6 +9,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     const [youtubeVideoUrl, setYoutubeVideoURL] = useState("");
     const [uploadedFileUrl, setUploadedFileUrl] = useState("");
     const [uploadedFileName, setUploadedFileName] = useState("");
+    const [uploadVideoDuration, setUploadVideoDuration] = useState(-1);
 
     const [isUploading, setIsUploading] = useState(false);
     const fileUploadRef = useRef<HTMLInputElement>(null);
@@ -42,6 +43,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     function cancelUploadFile() {
         setUploadedFileUrl("");
         setUploadedFileName("");
+        setUploadVideoDuration(-1);
         if (fileUploadRef.current) {
             fileUploadRef.current.value = "";
         }
@@ -68,7 +70,8 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
             // just the metadata will do
             const res = await window.api.uploadVideoFile(
                 uploadedFileUrl,
-                uploadedFileName
+                uploadedFileName,
+                uploadVideoDuration
             );
             if (res) {
                 const { videoMetadata } = res;
@@ -105,6 +108,10 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
         const tempUrl = URL.createObjectURL(currentFile);
         setUploadedFileUrl(tempUrl);
         setUploadedFileName(currentFile.name);
+        if (videoRef.current) {
+            setUploadVideoDuration(videoRef.current.duration);
+        }
+
         toast.success("File successfully uploaded!");
     }
 

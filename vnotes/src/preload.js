@@ -39,9 +39,14 @@ contextBridge.exposeInMainWorld("api", {
     addYoutubeVideo: async (videoUrl) =>
         await ipcRenderer.invoke("add-youtube-video", videoUrl),
 
-    uploadVideoFile: async (videoFileUrl, videoFileName) => {
+    uploadVideoFile: async (videoFileUrl, videoFileName, videoFileDuration) => {
         const videoBytes = await convertBlobToBytes(videoFileUrl);
-        await ipcRenderer.invoke("add-video-file", videoBytes, videoFileName);
+        await ipcRenderer.invoke(
+            "add-video-file",
+            videoBytes,
+            videoFileName,
+            videoFileDuration
+        );
     },
 
     getCurrentVideo: async (videoId) => {

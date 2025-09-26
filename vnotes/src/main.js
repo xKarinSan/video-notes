@@ -141,8 +141,10 @@ ipcMain.handle("get-all-metadata", async () => {
     return items;
 });
 
-ipcMain.handle("add-video-file", async (_, videoBytes, videoFileName) => {
-    /*
+ipcMain.handle(
+    "add-video-file",
+    async (_, videoBytes, videoFileName, videoFileDuration) => {
+        /*
     1) ensureDir -> metadata and videos
     2) generate a random UUID of the video
     3) Get the following info such that:
@@ -160,33 +162,75 @@ ipcMain.handle("add-video-file", async (_, videoBytes, videoFileName) => {
     6) save the transcript (same as the youtube part)
     7) call downloadVideoMetadata -> similar as the one in add-youtube-video
     */
-    console.log("add-video-file");
+        try {
+            console.log("add-video-file");
+            let res = {};
 
-    await ensureDir(PATHS.METADATA_DIR);
-    await ensureDir(PATHS.VIDEOS_DIR);
+            await ensureDir(PATHS.METADATA_DIR);
+            await ensureDir(PATHS.VIDEOS_DIR);
 
-    const videoId = randomUUID();
+            const videoId = randomUUID();
 
-    // we have the video
-    // const videoMetadata = {
-    //     id: videoId,
-    //     videoUrl: "",
-    //     name: videoFileName,
-    //     description: "-",
-    //     dateExtracted: Date.now(),
-    //     thumbnail: "-",
-    //     dateUploaded: Date.now(),
-    //     opName: opName,
-    //     duration: parseInt(timestamp),
-    //     notesIdList: [],
-    // };
+            // we have the video
+            // const videoMetadata = {
+            //     id: videoId,
+            //     videoUrl: "",
+            //     name: videoFileName,
+            //     description: "-",
+            //     dateExtracted: Date.now(),
+            //     thumbnail: "-",
+            //     dateUploaded: Date.now(),
+            //     opName: opName,
+            //     duration: parseInt(timestamp),
+            //     notesIdList: [],
+            // };
 
-    // download the video itself
-    const isVideoDownloaded = await downloadUploadedVideoFile(
-        videoBytes,
-        videoId
-    );
-});
+            // download the video itself
+            const isVideoDownloaded = await downloadUploadedVideoFile(
+                videoBytes,
+                videoId
+            );
+            if (!isVideoDownloaded) {
+                throw Error("Video download failed!");
+            }
+            // const openAIKey = await store.get("settings.open_ai_key");
+            // const transcriptText = await writeTranscriptFallback(videoId, openAIKey);
+            // savedTranscript = await writeFallbackTranscript(videoId, transcriptText);
+            // if (!transcriptText || !savedTranscript) {
+            //     throw Error("Transcript generation failed!");
+            // }
+
+            const uploadDateInMs = new Date().getTime();
+            const videoMetadata = {
+                id: videoId,
+                videoUrl: "",
+                name: videoFileName,
+                description: "User uploaded",
+                dateExtracted: Date.now(),
+                thumbnail: "",
+                dateUploaded: uploadDateInMs,
+                opName: "User",
+                duration: videoFileDuration,
+                notesIdList: [],
+            };
+
+            const isMetadataDownloaded = await downloadVideoMetadata(
+                videoMetadata,
+                videoId
+            );
+            if (!isMetadataDownloaded) {
+                throw Error("Video download failed!");
+            }
+            res.videoMetadata = videoMetadata;
+            res.existingVideo = false;
+            return res;
+        } catch (e) {
+            console.log("add-video-file :", e);
+
+            return null;
+        }
+    }
+);
 
 ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
     try {

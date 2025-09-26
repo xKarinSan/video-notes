@@ -92,7 +92,6 @@ async function downloadUploadedVideoFile(videoBytes, videoId) {
 2. Get the path
 3. Write the bytes into the path
         */
-
         const videoPath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
         await pfs.writeFile(videoPath, Buffer.from(videoBytes));
         return true;
