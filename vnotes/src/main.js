@@ -8,6 +8,7 @@ import started from "electron-squirrel-startup";
 import Store from "electron-store";
 import { randomUUID } from "node:crypto";
 import ytdl from "ytdl-core";
+import { applyIPv6Rotations } from "ytdl-core/lib/utils";
 import fs from "node:fs";
 
 import {
@@ -194,8 +195,14 @@ ipcMain.handle(
                 throw Error("Video download failed!");
             }
             const openAIKey = await store.get("settings.open_ai_key");
-            const transcriptText = await writeTranscriptFallback(videoId, openAIKey);
-            const savedTranscript = await writeFallbackTranscript(videoId, transcriptText);
+            const transcriptText = await writeTranscriptFallback(
+                videoId,
+                openAIKey
+            );
+            const savedTranscript = await writeFallbackTranscript(
+                videoId,
+                transcriptText
+            );
             if (!transcriptText || !savedTranscript) {
                 throw Error("Transcript generation failed!");
             }
@@ -266,6 +273,11 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
         }
 
         videoId = randomUUID();
+        // rotate IP
+        // const agentForARandomIP = ytdl.createAgent(undefined, {
+        //     localAddress: applyIPv6Rotations(),
+        // });
+
         const basicInfo = await ytdl.getInfo(videoUrl);
         const { videoDetails, formats } = basicInfo;
         const {
@@ -277,12 +289,13 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
             author,
             thumbnails,
         } = videoDetails;
-
-        const format = ytdl.chooseFormat(formats, { quality: "18" });
+        console.log("formats", formats);
+        const format = ytdl.chooseFormat(formats, { quality: "highestvideo" });
 
         // download the video itself
         const streamingUrl = format.url;
         console.log("BEFORE download call");
+
         const isVideoDownloaded = await downloadYoutubeVideoFile(
             streamingUrl,
             videoId

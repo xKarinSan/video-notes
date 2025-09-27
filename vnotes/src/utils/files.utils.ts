@@ -39,7 +39,10 @@ async function getVideoMetadataById(videoId) {
 
 async function getVideoPathById(videoId) {
     try {
-        const videoFileDirectory = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
+        const videoFileDirectory = path.join(
+            PATHS.VIDEOS_DIR,
+            `${videoId}.mp4`
+        );
         const videoFileExists = await fileExists(videoFileDirectory);
         if (!videoFileExists) {
             return null;
@@ -52,7 +55,10 @@ async function getVideoPathById(videoId) {
 
 async function getNotesMetadataById(notesId) {
     try {
-        const notesMetadataDirectory = path.join(PATHS.NOTES_DIR, `${notesId}.json`);
+        const notesMetadataDirectory = path.join(
+            PATHS.NOTES_DIR,
+            `${notesId}.json`
+        );
         const notesMetadataExists = await fileExists(notesMetadataDirectory);
 
         if (!notesMetadataExists) {
@@ -91,6 +97,8 @@ async function getAllNotesMetadata() {
     }
 }
 
+async function extractMp3(mp4File) {}
+
 export {
     ensureDir,
     fileExists,
@@ -98,4 +106,5 @@ export {
     getVideoPathById,
     getNotesMetadataById,
     getAllNotesMetadata,
+    extractMp3,
 };

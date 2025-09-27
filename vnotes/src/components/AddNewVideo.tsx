@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Video } from "../classes/Video";
 import { toast } from "react-toastify";
 type AddNewVideoProps = {
@@ -20,7 +20,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
             toast.info("Video uploading in progress...");
             setIsUploading(true);
             const res = await window.api.addYoutubeVideo(youtubeVideoUrl);
-            console.log("addYoutubeVideo | res",res);
+            console.log("addYoutubeVideo | res", res);
             if (res) {
                 const { videoMetadata, existingVideo } = res;
                 if (existingVideo) {
@@ -113,12 +113,27 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
         const tempUrl = URL.createObjectURL(currentFile);
         setUploadedFileUrl(tempUrl);
         setUploadedFileName(currentFile.name);
-        if (videoRef.current) {
-            setUploadVideoDuration(videoRef.current.duration);
-        }
-
         toast.success("File successfully uploaded!");
     }
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const handleLoadedMetadata = () => {
+            console.log("Video duration:", video.duration);
+            console.log("videoRef.current", videoRef.current);
+            if (videoRef.current) {
+                setUploadVideoDuration(videoRef.current.duration);
+            }
+        };
+
+        video.addEventListener("loadedmetadata", handleLoadedMetadata);
+
+        return () => {
+            video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+        };
+    }, []);
 
     return (
         <div>

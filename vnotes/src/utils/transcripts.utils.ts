@@ -4,7 +4,7 @@ import path from "node:path";
 import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
 import { TranscriptResponse } from "youtube-transcript-plus/dist/types";
-import OpenAI, { Uploadable } from "openai";
+import OpenAI, { Uploadable, toFile } from "openai";
 
 async function writeYoutubeTranscript(
     videoId: string,
@@ -31,7 +31,7 @@ async function writeYoutubeTranscript(
         await fsp.writeFile(transcriptTextFilePath, transcriptText);
         return true;
     } catch (e) {
-        console.error("writeTranscript | e", e);
+        console.error("writeYoutubeTranscript | e", e);
         return false;
     }
 }
@@ -95,10 +95,14 @@ async function writeTranscriptFallback(videoId, openAIKey) {
         // const videoContent = await fsp.readFile(videoFilePath);
         const fileStream = fs.createReadStream(
             videoFilePath
-        ) as unknown as Uploadable;
+        );
+        // console.log("writeTranscriptFallback | fileStream",fileStream)
+
+
+        //  const file = await toFile(fs.createReadStream(videoFilePath), `${videoId}.mp4`);
 
         const { text } = await openaiClient.audio.transcriptions.create({
-            file: fileStream as unknown as Uploadable,
+            file: fileStream,
             model: "whisper-1",
         });
         console.log("writeTranscriptFallback | transcript", text);
@@ -122,7 +126,7 @@ async function writeFallbackTranscript(videoId: string, transcript: string) {
         await fsp.writeFile(transcriptTextFilePath, transcript);
         return true;
     } catch (e) {
-        console.error("writeTranscript | e", e);
+        console.error("writeFallbackTranscript | e", e);
         return false;
     }
 }
