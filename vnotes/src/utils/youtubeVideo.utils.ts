@@ -3,9 +3,9 @@ import https from "node:https";
 import fsp from "node:fs/promises";
 import fs from "node:fs";
 import { promises as pfs } from "fs";
-
+import { pipeline } from "node:stream/promises";
 import { PATHS } from "../../const";
-import { fileExists, getVideoMetadataById } from "./files.utils";
+import { ensureDir, fileExists, getVideoMetadataById } from "./files.utils";
 
 function getYoutubeVideoId(url) {
     try {
@@ -50,45 +50,25 @@ async function downloadVideoMetadata(videoMetadata, videoId) {
     }
 }
 
-async function downloadYoutubeVideoFile(streamingUrl, videoId) {
-    console.log("downloadYoutubeVideoFile | streamingUrl", streamingUrl);
-    console.log("downloadYoutubeVideoFile | videoId", videoId);
-    return new Promise((resolve) => {
-        const videoPath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
-        const fileStream = fs.createWriteStream(videoPath);
+async function downloadYoutubeVideoFile(innertube, youtubeVideoId, videoId) {
+    await ensureDir(PATHS.VIDEOS_DIR);
+    const videoPath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
+    await fs.promises.mkdir(PATHS.VIDEOS_DIR, { recursive: true });
 
-        const req = https.get(
-            streamingUrl,
-            {
-                headers: {
-                    "User-Agent": "Mozilla/5.0",
-                },
-            },
-            (res) => {
-                // console.log("downloadYoutubeVideoFile | res", res);
-                console.log(
-                    "downloadYoutubeVideoFile | res.statusCode",
-                    res.statusCode
-                );
-                if (res.statusCode !== 200) {
-                    res.resume();
-                    fs.unlink(videoPath, () => resolve(false));
-                    return;
-                }
-
-                res.pipe(fileStream);
-
-                fileStream.on("finish", () => {
-                    fileStream.close(() => resolve(true));
-                });
-            }
-        );
-
-        req.on("error", (e) => {
-            console.log("e", e);
-            fs.unlink(videoPath, () => resolve(false));
+    try {
+        // Ask youtubei for a muxed (video+audio) MP4 stream
+        const stream = await innertube.download(youtubeVideoId, {
+            type: "video+audio",
+            quality: "best",
+            format: "mp4",
+            client: "ANDROID",
         });
-    });
+        await pipeline(stream, fs.createWriteStream(videoPath));
+        return true;
+    } catch (err) {
+        console.log("downloadYoutubeVideoFile | err", err);
+        return false;
+    }
 }
 
 async function downloadUploadedVideoFile(videoBytes, videoId) {

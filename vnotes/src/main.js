@@ -7,9 +7,8 @@ import fsp from "node:fs/promises";
 import started from "electron-squirrel-startup";
 import Store from "electron-store";
 import { randomUUID } from "node:crypto";
-import ytdl from "ytdl-core";
-import { applyIPv6Rotations } from "ytdl-core/lib/utils";
 import fs from "node:fs";
+import { Innertube } from "youtubei.js";
 
 import {
     getYoutubeVideoId,
@@ -72,6 +71,7 @@ if (started) {
 }
 let store = null;
 let mainWindow = null;
+let innertube = null;
 
 const createWindow = async () => {
     const iconPath = app.isPackaged
@@ -80,6 +80,10 @@ const createWindow = async () => {
 
     // Create the browser window.
     store = new Store();
+    innertube = await Innertube.create({
+        retrieve_player: true,
+        player_id: "0004de42",
+    });
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
@@ -273,33 +277,30 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
         }
 
         videoId = randomUUID();
-        // rotate IP
-        // const agentForARandomIP = ytdl.createAgent(undefined, {
-        //     localAddress: applyIPv6Rotations(),
-        // });
-
-        const basicInfo = await ytdl.getInfo(videoUrl);
-        const { videoDetails, formats } = basicInfo;
+        const info = await innertube.getInfo(youtubeVideoId);
+        const { basic_info, primary_info } = info;
         const {
+            id: originalVideoId,
             title,
-            description,
-            lengthSeconds: timestamp,
-            video_url,
-            uploadDate,
-            author,
-            thumbnails,
-        } = videoDetails;
-        console.log("formats", formats);
-        const format = ytdl.chooseFormat(formats, { quality: "highestvideo" });
+            short_description: description,
+            duration,
+            // video_url,
+            author: opName,
+            thumbnail,
+        } = basic_info;
 
-        // download the video itself
-        const streamingUrl = format.url;
+        // get the upload date
+        const { published } = primary_info;
+        const { text: uploadDateString } = published;
+        let dateUploaded = new Date(uploadDateString).getTime();
+
         console.log("BEFORE download call");
-
         const isVideoDownloaded = await downloadYoutubeVideoFile(
-            streamingUrl,
+            innertube,
+            originalVideoId,
             videoId
         );
+
         console.log("AFTER download call");
         let savedTranscript = false;
         try {
@@ -326,19 +327,17 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
         console.log("add-youtube-video-success");
 
         // download the metadata
-        const largestThumbnail = thumbnails[thumbnails.length - 1];
-        const uploadDateInMs = new Date(uploadDate).getTime();
-        const opName = author.name;
+        const largestThumbnail = thumbnail[0];
         videoMetadata = {
             id: videoId,
-            videoUrl: video_url,
+            videoUrl: `https://www.youtube.com/watch?v=${originalVideoId}`,
             name: title,
             description: description,
             dateExtracted: Date.now(),
             thumbnail: largestThumbnail.url,
-            dateUploaded: uploadDateInMs,
+            dateUploaded,
             opName: opName,
-            duration: parseInt(timestamp),
+            duration,
             notesIdList: [],
         };
 
