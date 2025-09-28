@@ -167,10 +167,10 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                 <div className="card-body">
                     <h2 className="card-title">Add New Video</h2>
                     <p>
-                        <label>Youtube Video</label>
+                        <p className="m-1">Youtube Video:</p>
                         <input
                             type="text"
-                            placeholder="Enter youtube URL"
+                            placeholder="Enter/Paste Youtube Video URL"
                             className="input w-full"
                             onChange={(e) => setYoutubeVideoURL(e.target.value)}
                             value={youtubeVideoUrl}
@@ -185,12 +185,12 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                     </p>
                     <label className="m-auto">or</label>
                     <p>
-                        <label>User upload (MP4)</label>
+                        <p className="m-1">User upload (MP4):</p>
                         <input
                             type="file"
                             accept=".mp4"
                             placeholder="Upload file"
-                            className="input w-full"
+                            className="file-input w-full"
                             multiple={false}
                             ref={fileUploadRef}
                             onChange={(e) => handleFileUpload(e)}
