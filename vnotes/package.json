@@ -48,6 +48,7 @@
     "@tailwindcss/vite": "^4.1.11",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^10.1.0",
+    "ffmpeg-static": "^5.2.0",
     "jspdf": "^3.0.1",
     "langchain": "^0.3.31",
     "log": "^6.3.2",

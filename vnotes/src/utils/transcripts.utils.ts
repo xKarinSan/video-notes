@@ -5,6 +5,8 @@ import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
 import { TranscriptResponse } from "youtube-transcript-plus/dist/types";
 import OpenAI, { Uploadable, toFile } from "openai";
+import ffmpegPath from "ffmpeg-static";
+import { spawn } from "child_process";
 
 async function writeYoutubeTranscript(
     videoId: string,
@@ -85,21 +87,51 @@ async function getTextTranscript(videoId) {
     return notesItemContent;
 }
 
+async function extractAudio(videoPath, videoId) {
+    const tempDir = path.join(PATHS.USER_DATA_BASE + "/temp");
+    await ensureDir(tempDir);
+    const tempPath = path.join(tempDir, `${videoId}.mp3`);
+    return new Promise((resolve) => {
+        const args = [
+            "-y",
+            "-i",
+            videoPath,
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            "-c:a",
+            "libmp3lame",
+            "-b:a",
+            "48k",
+            tempPath,
+        ];
+
+        const proc = spawn(ffmpegPath as string, args, { stdio: "inherit" });
+        proc.on("close", (code) => {
+            if (code === 0) {
+                // successful
+                resolve(tempPath);
+            } else {
+                resolve("");
+            }
+        });
+    });
+}
+
 async function writeTranscriptFallback(videoId, openAIKey) {
+    let audioPath: string | null = null;
     try {
         console.log("writeTranscriptFallback | started");
         let openaiClient = new OpenAI({ apiKey: openAIKey });
-        // extract audio as mp3 (temporary)
 
         const videoFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
-        // const videoContent = await fsp.readFile(videoFilePath);
-        const fileStream = fs.createReadStream(
-            videoFilePath
-        );
-        // console.log("writeTranscriptFallback | fileStream",fileStream)
+        // const fileStream = fs.createReadStream(videoFilePath);
 
-
-        //  const file = await toFile(fs.createReadStream(videoFilePath), `${videoId}.mp4`);
+        // file size limit is 25MB
+        audioPath = (await extractAudio(videoFilePath, videoId)) as string;
+        const fileStream = fs.createReadStream(audioPath);
 
         const { text } = await openaiClient.audio.transcriptions.create({
             file: fileStream,
@@ -110,6 +142,18 @@ async function writeTranscriptFallback(videoId, openAIKey) {
     } catch (e) {
         console.log("writeTranscriptFallback | e", e);
         return null;
+    } finally {
+        if (audioPath) {
+            try {
+                await fsp.unlink(audioPath);
+                console.log("writeTranscriptFallback | cleaned up", audioPath);
+            } catch (cleanupErr) {
+                console.warn(
+                    "writeTranscriptFallback | cleanup failed",
+                    cleanupErr
+                );
+            }
+        }
     }
 }
 

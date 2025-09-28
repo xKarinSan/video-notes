@@ -149,24 +149,6 @@ ipcMain.handle("get-all-metadata", async () => {
 ipcMain.handle(
     "add-video-file",
     async (_, videoBytes, videoFileName, videoFileDuration) => {
-        /*
-    1) ensureDir -> metadata and videos
-    2) generate a random UUID of the video
-    3) Get the following info such that:
-
-    title -> file name
-    description -> leave blank
-    lengthSeconds -> duration of vide in seconds,
-    video_url -> the original path of the video (may be redundant)
-    uploadDate -> now
-    author -> name of the user in the OS
-    thumbnails -> use whisper for now
-
-    4) stream the data? -> stream the metadata into the file path
-    5) Get the transcript -> find a library
-    6) save the transcript (same as the youtube part)
-    7) call downloadVideoMetadata -> similar as the one in add-youtube-video
-    */
         try {
             console.log("add-video-file");
             let res = {};
@@ -175,20 +157,6 @@ ipcMain.handle(
             await ensureDir(PATHS.VIDEOS_DIR);
 
             const videoId = randomUUID();
-
-            // we have the video
-            // const videoMetadata = {
-            //     id: videoId,
-            //     videoUrl: "",
-            //     name: videoFileName,
-            //     description: "-",
-            //     dateExtracted: Date.now(),
-            //     thumbnail: "-",
-            //     dateUploaded: Date.now(),
-            //     opName: opName,
-            //     duration: parseInt(timestamp),
-            //     notesIdList: [],
-            // };
 
             // download the video itself
             const isVideoDownloaded = await downloadUploadedVideoFile(
