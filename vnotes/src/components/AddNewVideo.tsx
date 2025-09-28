@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Video } from "../classes/Video";
 import { toast } from "react-toastify";
+import { setVideoThumbnail } from "../utils/thumbnails.utils";
 type AddNewVideoProps = {
     onVideoAdded?: (video: Video) => void;
 };
@@ -9,6 +10,8 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     const [youtubeVideoUrl, setYoutubeVideoURL] = useState("");
     const [uploadedFileUrl, setUploadedFileUrl] = useState("");
     const [uploadedFileName, setUploadedFileName] = useState("");
+    const [uploadedVideoThumbnailUrl, setUploadedVideoThumbnailUrl] =
+        useState("");
     const [uploadVideoDuration, setUploadVideoDuration] = useState(-1);
 
     const [isUploading, setIsUploading] = useState(false);
@@ -45,6 +48,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     function cancelUploadFile() {
         setUploadedFileUrl("");
         setUploadedFileName("");
+        setUploadedVideoThumbnailUrl("");
         setUploadVideoDuration(-1);
         if (fileUploadRef.current) {
             fileUploadRef.current.value = "";
@@ -80,9 +84,11 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
 
             if (res) {
                 const { videoMetadata } = res;
+                videoMetadata.thumbnail = uploadedVideoThumbnailUrl;
                 onVideoAdded?.(videoMetadata);
                 setUploadedFileUrl("");
                 setUploadedFileName("");
+                setUploadedVideoThumbnailUrl("");
                 if (fileUploadRef.current) {
                     fileUploadRef.current.value = "";
                 }
@@ -121,13 +127,32 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
         const video = videoRef.current;
         if (!video) return;
 
-        const handleLoadedMetadata = () => {
+        const handleLoadedMetadata = async () => {
             console.log("Video duration:", video.duration);
             console.log("videoRef.current", videoRef.current);
             if (videoRef.current) {
                 setUploadVideoDuration(videoRef.current.duration);
+                const canvas: HTMLCanvasElement = document.createElement(
+                    "canvas"
+                ) as HTMLCanvasElement;
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext("2d");
+                ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) {
+                            console.error("toBlob failed");
+                            return;
+                        }
+                        const url = URL.createObjectURL(blob);
+                        setVideoThumbnail(url);
+                    },
+                    "image/jpeg",
+                    0.85
+                );
+                canvas.remove();
             }
-            // also get the thumbnail from the video tag
         };
 
         video.addEventListener("loadedmetadata", handleLoadedMetadata);
