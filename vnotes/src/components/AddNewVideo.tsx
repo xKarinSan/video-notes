@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Video } from "../classes/Video";
 import { toast } from "react-toastify";
-import { setVideoThumbnail } from "../utils/thumbnails.utils";
 type AddNewVideoProps = {
     onVideoAdded?: (video: Video) => void;
 };
@@ -146,7 +145,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                             return;
                         }
                         const url = URL.createObjectURL(blob);
-                        setVideoThumbnail(url);
+                        setUploadedVideoThumbnailUrl(url);
                     },
                     "image/jpeg",
                     0.85

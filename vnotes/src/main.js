@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeImage } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import { fetchTranscript } from "youtube-transcript-plus";
 import { updateElectronApp, UpdateSourceType } from "update-electron-app";
 
@@ -100,6 +100,7 @@ const createWindow = async () => {
     const lastPath = store.get("lastPath", "/");
     // and load the index.html of the app.
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+        mainWindow.webContents.openDevTools();
         mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL + lastPath);
     } else {
         const indexPath = path.join(
@@ -109,7 +110,6 @@ const createWindow = async () => {
         const hash = lastPath.startsWith("/") ? lastPath.slice(1) : lastPath;
         mainWindow.loadFile(indexPath, { hash });
     }
-    mainWindow.webContents.openDevTools();
 };
 // HELPERS
 
@@ -141,13 +141,16 @@ ipcMain.handle("get-all-metadata", async () => {
                 data = JSON.parse(raw);
                 if (data.opName == "User") {
                     // change the thumbnail into a temporary URL for rendering process?
-                    const dir = path.join(PATHS.THUMBNAILS_DIR, `${baseId}.jpeg`);
+                    const dir = path.join(
+                        PATHS.THUMBNAILS_DIR,
+                        `${baseId}.jpeg`
+                    );
                     const buf = await fsp.readFile(dir);
                     data.thumbnail = buf;
                 }
                 data.id = baseId;
             } catch (e) {
-                console.log("e",e);
+                console.log("e", e);
                 data = {};
             }
             console.log("get-all-metadata | data", data);

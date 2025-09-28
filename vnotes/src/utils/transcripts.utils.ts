@@ -5,8 +5,17 @@ import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
 import { TranscriptResponse } from "youtube-transcript-plus/dist/types";
 import OpenAI from "openai";
-import ffmpegPath from "ffmpeg-static";
+// import ffmpegPath from "ffmpeg-static";
 import { spawn } from "child_process";
+import { createRequire } from "node:module";
+const requireRuntime = createRequire(import.meta.url);
+
+function resolveFfmpegPath(): string {
+    let p = requireRuntime("ffmpeg-static") as string; // absolute path to ffmpeg
+    // When packaged, make sure we point to the unpacked copy
+    if (p.includes("app.asar")) p = p.replace("app.asar", "app.asar.unpacked");
+    return p;
+}
 
 async function writeYoutubeTranscript(
     videoId: string,
@@ -91,6 +100,8 @@ async function extractAudio(videoPath, videoId) {
     const tempDir = path.join(PATHS.USER_DATA_BASE + "/temp");
     await ensureDir(tempDir);
     const tempPath = path.join(tempDir, `${videoId}.mp3`);
+    const ffmpegPath = resolveFfmpegPath();
+
     return new Promise((resolve) => {
         const args = [
             "-y",
