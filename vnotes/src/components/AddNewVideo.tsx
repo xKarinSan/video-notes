@@ -70,6 +70,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
             toast.info("Video uploading in progress...");
             setIsUploading(true);
             // just the metadata will do
+            // thumbnail is also needed
             const res = await window.api.uploadVideoFile(
                 uploadedFileUrl,
                 uploadedFileName,
@@ -126,6 +127,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
             if (videoRef.current) {
                 setUploadVideoDuration(videoRef.current.duration);
             }
+            // also get the thumbnail from the video tag
         };
 
         video.addEventListener("loadedmetadata", handleLoadedMetadata);

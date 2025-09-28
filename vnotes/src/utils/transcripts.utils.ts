@@ -4,7 +4,7 @@ import path from "node:path";
 import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
 import { TranscriptResponse } from "youtube-transcript-plus/dist/types";
-import OpenAI, { Uploadable, toFile } from "openai";
+import OpenAI from "openai";
 import ffmpegPath from "ffmpeg-static";
 import { spawn } from "child_process";
 

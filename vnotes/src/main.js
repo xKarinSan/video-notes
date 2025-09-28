@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, nativeImage } from "electron";
 import { fetchTranscript } from "youtube-transcript-plus";
 import { updateElectronApp, UpdateSourceType } from "update-electron-app";
 
@@ -57,6 +57,10 @@ import {
     splitToChunks,
     summariseCombinedSummaries,
 } from "./utils/summary.utils";
+import {
+    deleteVideoThumbnail,
+    setVideoThumbnail,
+} from "./utils/thumbnails.utils";
 
 updateElectronApp({
     updateSource: {
@@ -155,6 +159,7 @@ ipcMain.handle(
 
             await ensureDir(PATHS.METADATA_DIR);
             await ensureDir(PATHS.VIDEOS_DIR);
+            await ensureDir(PATHS.THUMBNAILS_DIR);
 
             const videoId = randomUUID();
 
@@ -166,6 +171,9 @@ ipcMain.handle(
             if (!isVideoDownloaded) {
                 throw Error("Video download failed!");
             }
+
+            // get thumbnails
+            const videoThumbnail = await setVideoThumbnail(videoId);
             const openAIKey = await store.get("settings.open_ai_key");
             const transcriptText = await writeTranscriptFallback(
                 videoId,
@@ -186,7 +194,7 @@ ipcMain.handle(
                 name: videoFileName,
                 description: "User uploaded",
                 dateExtracted: Date.now(),
-                thumbnail: "",
+                thumbnail: videoThumbnail,
                 dateUploaded: uploadDateInMs,
                 opName: "User",
                 duration: videoFileDuration,
@@ -197,7 +205,19 @@ ipcMain.handle(
                 videoMetadata,
                 videoId
             );
-            if (!isMetadataDownloaded) {
+
+            if (
+                !(
+                    isVideoDownloaded &&
+                    isMetadataDownloaded &&
+                    savedTranscript &&
+                    videoThumbnail != null
+                )
+            ) {
+                await deleteVideoMetadata(videoId);
+                await deleteVideoFile(videoId);
+                await deleteTranscript(videoId);
+                await deleteVideoThumbnail(videoId);
                 throw Error("Video download failed!");
             }
             res.videoMetadata = videoMetadata;
@@ -500,19 +520,22 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
             recordDeleted,
             snapshotsDeleted,
             transcriptsDeleted,
+            thumbnailDeleted,
         ] = await Promise.all([
             deleteNotesFromList(notesIdList),
             deleteNotesMetadata(notesIdList),
             deleteVideoRecord(videoId),
             deleteSnapshotFromNote(notesIdList),
             deleteTranscript(videoId),
+            deleteVideoThumbnail(videoId),
         ]);
         if (
             !notesDeleted ||
             !recordDeleted ||
             !notesContentsDeleted ||
             !snapshotsDeleted ||
-            !transcriptsDeleted
+            !transcriptsDeleted ||
+            !thumbnailDeleted
         )
             return false;
 
