@@ -11,7 +11,7 @@ async function setVideoThumbnail(videoId: string) {
         await ensureDir(PATHS.THUMBNAILS_DIR);
 
         const videoPath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
-        const outPath = path.join(PATHS.THUMBNAILS_DIR, `${videoId}.png`);
+        const outPath = path.join(PATHS.THUMBNAILS_DIR, `${videoId}.jpeg`);
         console.log("getSystemThumbnail | videoPath", videoPath);
         console.log("getSystemThumbnail | outPath", outPath);
 
@@ -22,7 +22,7 @@ async function setVideoThumbnail(videoId: string) {
         console.log("getSystemThumbnail | image", image);
 
         if (!image.isEmpty()) {
-            await fsp.writeFile(outPath, image.toPNG());
+            await fsp.writeFile(outPath, image.toJPEG(85));
             console.log("getSystemThumbnail | done");
             return outPath;
         }
@@ -37,7 +37,10 @@ async function setVideoThumbnail(videoId: string) {
 async function deleteVideoThumbnail(videoId: string) {
     try {
         await ensureDir(PATHS.THUMBNAILS_DIR);
-        const thumbnailPath = path.join(PATHS.THUMBNAILS_DIR, `${videoId}.png`);
+        const thumbnailPath = path.join(
+            PATHS.THUMBNAILS_DIR,
+            `${videoId}.jpeg`
+        );
         const thumbnailExists = await fileExists(thumbnailPath);
         if (thumbnailExists) {
             await fsp.unlink(thumbnailPath);

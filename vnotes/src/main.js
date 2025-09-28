@@ -139,10 +139,18 @@ ipcMain.handle("get-all-metadata", async () => {
             let data = {};
             try {
                 data = JSON.parse(raw);
+                if (data.opName == "User") {
+                    // change the thumbnail into a temporary URL for rendering process?
+                    const dir = path.join(PATHS.THUMBNAILS_DIR, `${baseId}.jpeg`);
+                    const buf = await fsp.readFile(dir);
+                    data.thumbnail = buf;
+                }
                 data.id = baseId;
-            } catch {
+            } catch (e) {
+                console.log("e",e);
                 data = {};
             }
+            console.log("get-all-metadata | data", data);
             return data;
         })
     );
