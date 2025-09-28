@@ -15,6 +15,14 @@ async function dictToBufferMap(dict) {
     const res = Object.fromEntries(entries);
     return res;
 }
+
+async function convertBlobToBytes(blobUrl) {
+    const res = await fetch(blobUrl);
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return buffer;
+}
+
 function bufferDictToUrlMap(dict) {
     const entries = Object.entries(dict).map(([id, bytes]) => {
         const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -27,9 +35,41 @@ function bufferDictToUrlMap(dict) {
 }
 
 contextBridge.exposeInMainWorld("api", {
-    listMetadata: async () => await ipcRenderer.invoke("get-all-metadata"),
-    getVideodata: async (videoUrl) =>
-        await ipcRenderer.invoke("add-current-video", videoUrl),
+
+    listMetadata: async () => {
+        let allMetadata = await ipcRenderer.invoke("get-all-metadata");
+        allMetadata.forEach((item) => {
+            if (item.opName === "User" && item.thumbnail) {
+                console.log("listMetadata | thumbnail", item.thumbnail);
+                // get the bytes of the thumbnail
+
+                // convert the bytes into url
+                const u8 =
+                    item.thumbnail instanceof Uint8Array
+                        ? item.thumbnail
+                        : new Uint8Array(item.thumbnail);
+                const blob = new Blob([u8], { type: "image/png" });
+                const blobUrl = URL.createObjectURL(blob);
+                item.thumbnail = blobUrl; // replace with temporary blob URL
+                console.log("listMetadata | blobUrl", blobUrl);
+            }
+        });
+        return allMetadata;
+    },
+    addYoutubeVideo: async (videoUrl) => {
+        return await ipcRenderer.invoke("add-youtube-video", videoUrl);
+    },
+
+    uploadVideoFile: async (videoFileUrl, videoFileName, videoFileDuration) => {
+        const videoBytes = await convertBlobToBytes(videoFileUrl);
+        return await ipcRenderer.invoke(
+            "add-video-file",
+            videoBytes,
+            videoFileName,
+            videoFileDuration
+        );
+    },
+
     getCurrentVideo: async (videoId) => {
         const result = await ipcRenderer.invoke("get-current-video", videoId);
         if (!result) return null;
@@ -118,5 +158,5 @@ contextBridge.exposeInMainWorld("settings", {
     setOpenAIKey: async (openAiKey) => {
         return await ipcRenderer.invoke("set-openai-key", openAiKey);
     },
-    savePath: (path) => ipcRenderer.send("save-path", path)
+    savePath: (path) => ipcRenderer.send("save-path", path),
 });

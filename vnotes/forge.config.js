@@ -7,7 +7,7 @@ module.exports = {
     packagerConfig: {
         asar: {
             unpack: "**/*.node", // native modules should not be inside asar
-            unpackDir: "assets", // ship assets as loose files (fast to pack & load)
+            unpackDir: "{assets,node_modules/ffmpeg-static}",
         },
         ignore: [
             /^\/\.git($|\/)/,

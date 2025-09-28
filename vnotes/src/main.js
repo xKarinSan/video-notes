@@ -1,19 +1,20 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { fetchTranscript } from "youtube-transcript-plus";
-import { updateElectronApp } from "update-electron-app";
+import { updateElectronApp, UpdateSourceType } from "update-electron-app";
 
 import path from "node:path";
 import fsp from "node:fs/promises";
 import started from "electron-squirrel-startup";
 import Store from "electron-store";
 import { randomUUID } from "node:crypto";
-import ytdl from "ytdl-core";
 import fs from "node:fs";
+import { Innertube } from "youtubei.js";
 
 import {
     getYoutubeVideoId,
     downloadVideoMetadata,
-    downloadVideoFile,
+    downloadYoutubeVideoFile,
+    downloadUploadedVideoFile,
     deleteVideoMetadata,
     deleteVideoFile,
     deleteVideoRecord,
@@ -48,21 +49,33 @@ import {
 import {
     deleteTranscript,
     getTextTranscript,
-    writeTranscript,
+    writeYoutubeTranscript,
+    writeTranscriptFallback,
+    writeFallbackTranscript,
 } from "./utils/transcripts.utils";
 import {
     splitToChunks,
     summariseCombinedSummaries,
 } from "./utils/summary.utils";
+import {
+    deleteVideoThumbnail,
+    setVideoThumbnail,
+} from "./utils/thumbnails.utils";
 
-updateElectronApp({ repo: "xKarinSan/video-notes", updateInterval: "1 hour" });
-
+updateElectronApp({
+    updateSource: {
+        type: UpdateSourceType.ElectronPublicUpdateService,
+        repo: "xKarinSan/video-notes",
+    },
+    updateInterval: "1 hour",
+});
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
     app.quit();
 }
 let store = null;
 let mainWindow = null;
+let innertube = null;
 
 const createWindow = async () => {
     const iconPath = app.isPackaged
@@ -71,6 +84,10 @@ const createWindow = async () => {
 
     // Create the browser window.
     store = new Store();
+    innertube = await Innertube.create({
+        retrieve_player: true,
+        player_id: "0004de42",
+    });
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
@@ -83,6 +100,7 @@ const createWindow = async () => {
     const lastPath = store.get("lastPath", "/");
     // and load the index.html of the app.
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+        mainWindow.webContents.openDevTools();
         mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL + lastPath);
     } else {
         const indexPath = path.join(
@@ -121,10 +139,21 @@ ipcMain.handle("get-all-metadata", async () => {
             let data = {};
             try {
                 data = JSON.parse(raw);
+                if (data.opName == "User") {
+                    // change the thumbnail into a temporary URL for rendering process?
+                    const dir = path.join(
+                        PATHS.THUMBNAILS_DIR,
+                        `${baseId}.jpeg`
+                    );
+                    const buf = await fsp.readFile(dir);
+                    data.thumbnail = buf;
+                }
                 data.id = baseId;
-            } catch {
+            } catch (e) {
+                console.log("e", e);
                 data = {};
             }
+            console.log("get-all-metadata | data", data);
             return data;
         })
     );
@@ -132,7 +161,89 @@ ipcMain.handle("get-all-metadata", async () => {
     return items;
 });
 
-ipcMain.handle("add-current-video", async (_, videoUrl) => {
+ipcMain.handle(
+    "add-video-file",
+    async (_, videoBytes, videoFileName, videoFileDuration) => {
+        try {
+            console.log("add-video-file");
+            let res = {};
+
+            await ensureDir(PATHS.METADATA_DIR);
+            await ensureDir(PATHS.VIDEOS_DIR);
+            await ensureDir(PATHS.THUMBNAILS_DIR);
+
+            const videoId = randomUUID();
+
+            // download the video itself
+            const isVideoDownloaded = await downloadUploadedVideoFile(
+                videoBytes,
+                videoId
+            );
+            if (!isVideoDownloaded) {
+                throw Error("Video download failed!");
+            }
+
+            // get thumbnails
+            const videoThumbnail = await setVideoThumbnail(videoId);
+            const openAIKey = await store.get("settings.open_ai_key");
+            const transcriptText = await writeTranscriptFallback(
+                videoId,
+                openAIKey
+            );
+            const savedTranscript = await writeFallbackTranscript(
+                videoId,
+                transcriptText
+            );
+            if (!transcriptText || !savedTranscript) {
+                throw Error("Transcript generation failed!");
+            }
+
+            const uploadDateInMs = new Date().getTime();
+            const videoMetadata = {
+                id: videoId,
+                videoUrl: "",
+                name: videoFileName,
+                description: "User uploaded",
+                dateExtracted: Date.now(),
+                thumbnail: videoThumbnail,
+                dateUploaded: uploadDateInMs,
+                opName: "User",
+                duration: videoFileDuration,
+                notesIdList: [],
+            };
+
+            const isMetadataDownloaded = await downloadVideoMetadata(
+                videoMetadata,
+                videoId
+            );
+
+            if (
+                !(
+                    isVideoDownloaded &&
+                    isMetadataDownloaded &&
+                    savedTranscript &&
+                    videoThumbnail != null
+                )
+            ) {
+                await deleteVideoMetadata(videoId);
+                await deleteVideoFile(videoId);
+                await deleteTranscript(videoId);
+                await deleteVideoThumbnail(videoId);
+                throw Error("Video download failed!");
+            }
+            res.videoMetadata = videoMetadata;
+            res.existingVideo = false;
+            console.log("add-video-file  | res", res);
+            return res;
+        } catch (e) {
+            console.log("add-video-file :", e);
+
+            return null;
+        }
+    }
+);
+
+ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
     try {
         const youtubeVideoId = getYoutubeVideoId(videoUrl);
         if (!youtubeVideoId) {
@@ -165,47 +276,67 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
         }
 
         videoId = randomUUID();
-        const basicInfo = await ytdl.getInfo(videoUrl);
-        const { videoDetails, formats } = basicInfo;
+        const info = await innertube.getInfo(youtubeVideoId);
+        const { basic_info, primary_info } = info;
         const {
+            id: originalVideoId,
             title,
-            description,
-            lengthSeconds: timestamp,
-            video_url,
-            uploadDate,
-            author,
-            thumbnails,
-        } = videoDetails;
+            short_description: description,
+            duration,
+            // video_url,
+            author: opName,
+            thumbnail,
+        } = basic_info;
 
-        const format = ytdl.chooseFormat(formats, { quality: "18" });
+        // get the upload date
+        const { published } = primary_info;
+        const { text: uploadDateString } = published;
+        let dateUploaded = new Date(uploadDateString).getTime();
 
-        // download the video itself
-        const streamingUrl = format.url;
-        const isVideoDownloaded = await downloadVideoFile(
-            streamingUrl,
+        console.log("BEFORE download call");
+        const isVideoDownloaded = await downloadYoutubeVideoFile(
+            innertube,
+            originalVideoId,
             videoId
         );
-        let transcript = [];
 
-        await fetchTranscript(youtubeVideoId).then((res) => {
-            transcript = res;
-        });
-        const savedTranscript = await writeTranscript(videoId, transcript);
+        console.log("AFTER download call");
+        let savedTranscript = false;
+        try {
+            console.log("add-youtube-video | try");
+            let transcript = [];
+
+            await fetchTranscript(youtubeVideoId).then((res) => {
+                transcript = res;
+            });
+            savedTranscript = await writeYoutubeTranscript(videoId, transcript);
+        } catch (e) {
+            console.log("add-youtube-video | e | before fallback", e);
+            const openAIKey = await store.get("settings.open_ai_key");
+            const transcriptText = await writeTranscriptFallback(
+                videoId,
+                openAIKey
+            );
+            savedTranscript = await writeFallbackTranscript(
+                videoId,
+                transcriptText
+            );
+        }
+        console.log("add-youtube-video | savedTranscript");
+        console.log("add-youtube-video-success");
 
         // download the metadata
-        const largestThumbnail = thumbnails[thumbnails.length - 1];
-        const uploadDateInMs = new Date(uploadDate).getTime();
-        const opName = author.name;
+        const largestThumbnail = thumbnail[0];
         videoMetadata = {
             id: videoId,
-            videoUrl: video_url,
+            videoUrl: `https://www.youtube.com/watch?v=${originalVideoId}`,
             name: title,
             description: description,
             dateExtracted: Date.now(),
             thumbnail: largestThumbnail.url,
-            dateUploaded: uploadDateInMs,
+            dateUploaded,
             opName: opName,
-            duration: parseInt(timestamp),
+            duration,
             notesIdList: [],
         };
 
@@ -214,34 +345,25 @@ ipcMain.handle("add-current-video", async (_, videoUrl) => {
             videoId
         );
 
-        if (
-            !(
-                isVideoDownloaded &&
-                isMetadataDownloaded &&
-                transcript &&
-                savedTranscript
-            )
-        ) {
-            // implement rollback
-            if (!isVideoDownloaded) {
-                // rollback metadata
-                await deleteVideoMetadata(videoId);
-            }
-            if (!isMetadataDownloaded) {
-                // rollback video download
-                await deleteVideoFile(videoId);
-            }
-            if (!savedTranscript) {
-                await deleteTranscript(videoId);
-            }
+        console.log("add-youtube-video | isVideoDownloaded", isVideoDownloaded);
+        console.log(
+            "add-youtube-video | isMetadataDownloaded",
+            isMetadataDownloaded
+        );
+
+        if (!(isVideoDownloaded && isMetadataDownloaded && savedTranscript)) {
+            await deleteVideoMetadata(videoId);
+            await deleteVideoFile(videoId);
+            await deleteTranscript(videoId);
             return null;
         }
         store.set("yt." + youtubeVideoId, videoId);
         store.set("vd." + videoId, youtubeVideoId);
         res.videoMetadata = videoMetadata;
+        console.log("add-youtube-video  | res", res);
         return res;
     } catch (e) {
-        console.log("add-current-video :", e);
+        console.log("add-youtube-video :", e);
         return null;
     }
 });
@@ -409,19 +531,22 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
             recordDeleted,
             snapshotsDeleted,
             transcriptsDeleted,
+            thumbnailDeleted,
         ] = await Promise.all([
             deleteNotesFromList(notesIdList),
             deleteNotesMetadata(notesIdList),
             deleteVideoRecord(videoId),
             deleteSnapshotFromNote(notesIdList),
             deleteTranscript(videoId),
+            deleteVideoThumbnail(videoId),
         ]);
         if (
             !notesDeleted ||
             !recordDeleted ||
             !notesContentsDeleted ||
             !snapshotsDeleted ||
-            !transcriptsDeleted
+            !transcriptsDeleted ||
+            !thumbnailDeleted
         )
             return false;
 

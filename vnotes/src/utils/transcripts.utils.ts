@@ -1,10 +1,23 @@
 import fsp from "node:fs/promises";
+import fs from "node:fs";
 import path from "node:path";
 import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
 import { TranscriptResponse } from "youtube-transcript-plus/dist/types";
+import OpenAI from "openai";
+// import ffmpegPath from "ffmpeg-static";
+import { spawn } from "child_process";
+import { createRequire } from "node:module";
+const requireRuntime = createRequire(import.meta.url);
 
-async function writeTranscript(
+function resolveFfmpegPath(): string {
+    let p = requireRuntime("ffmpeg-static") as string; // absolute path to ffmpeg
+    // When packaged, make sure we point to the unpacked copy
+    if (p.includes("app.asar")) p = p.replace("app.asar", "app.asar.unpacked");
+    return p;
+}
+
+async function writeYoutubeTranscript(
     videoId: string,
     transcript: TranscriptResponse[]
 ) {
@@ -29,7 +42,7 @@ async function writeTranscript(
         await fsp.writeFile(transcriptTextFilePath, transcriptText);
         return true;
     } catch (e) {
-        console.error("writeTranscript | e", e);
+        console.error("writeYoutubeTranscript | e", e);
         return false;
     }
 }
@@ -83,4 +96,100 @@ async function getTextTranscript(videoId) {
     return notesItemContent;
 }
 
-export { writeTranscript, deleteTranscript, getTextTranscript };
+async function extractAudio(videoPath, videoId) {
+    const tempDir = path.join(PATHS.USER_DATA_BASE + "/temp");
+    await ensureDir(tempDir);
+    const tempPath = path.join(tempDir, `${videoId}.mp3`);
+    const ffmpegPath = resolveFfmpegPath();
+
+    return new Promise((resolve) => {
+        const args = [
+            "-y",
+            "-i",
+            videoPath,
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            "-c:a",
+            "libmp3lame",
+            "-b:a",
+            "48k",
+            tempPath,
+        ];
+
+        const proc = spawn(ffmpegPath as string, args, { stdio: "inherit" });
+        proc.on("close", (code) => {
+            if (code === 0) {
+                // successful
+                resolve(tempPath);
+            } else {
+                resolve("");
+            }
+        });
+    });
+}
+
+async function writeTranscriptFallback(videoId, openAIKey) {
+    let audioPath: string | null = null;
+    try {
+        console.log("writeTranscriptFallback | started");
+        let openaiClient = new OpenAI({ apiKey: openAIKey });
+
+        const videoFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
+        // const fileStream = fs.createReadStream(videoFilePath);
+
+        // file size limit is 25MB
+        audioPath = (await extractAudio(videoFilePath, videoId)) as string;
+        const fileStream = fs.createReadStream(audioPath);
+
+        const { text } = await openaiClient.audio.transcriptions.create({
+            file: fileStream,
+            model: "whisper-1",
+        });
+        console.log("writeTranscriptFallback | transcript", text);
+        return text;
+    } catch (e) {
+        console.log("writeTranscriptFallback | e", e);
+        return null;
+    } finally {
+        if (audioPath) {
+            try {
+                await fsp.unlink(audioPath);
+                console.log("writeTranscriptFallback | cleaned up", audioPath);
+            } catch (cleanupErr) {
+                console.warn(
+                    "writeTranscriptFallback | cleanup failed",
+                    cleanupErr
+                );
+            }
+        }
+    }
+}
+
+async function writeFallbackTranscript(videoId: string, transcript: string) {
+    try {
+        let transcriptText = "";
+        await ensureDir(PATHS.TRANSCRIPTS_DIR);
+        await ensureDir(PATHS.TIMESTAMPED_TRANSCRIPTS_DIR);
+
+        const transcriptTextFilePath = path.join(
+            PATHS.TRANSCRIPTS_DIR,
+            `${videoId}.txt`
+        );
+        await fsp.writeFile(transcriptTextFilePath, transcript);
+        return true;
+    } catch (e) {
+        console.error("writeFallbackTranscript | e", e);
+        return false;
+    }
+}
+
+export {
+    writeYoutubeTranscript,
+    deleteTranscript,
+    getTextTranscript,
+    writeTranscriptFallback,
+    writeFallbackTranscript,
+};
