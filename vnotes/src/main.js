@@ -1,10 +1,6 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { fetchTranscript } from "youtube-transcript-plus";
-import {
-    updateElectronApp,
-    UpdateSourceType,
-    autoUpdater,
-} from "update-electron-app";
+import { updateElectronApp, UpdateSourceType } from "update-electron-app";
 
 import path from "node:path";
 import fsp from "node:fs/promises";
@@ -652,9 +648,6 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-    setImmediate(() => {
-        autoUpdater.checkForUpdatesAndNotify().catch((err) => {});
-    });
     if (process.platform === "darwin") {
         const iconPath = app.isPackaged
             ? path.join(process.resourcesPath, "assets", "icon.png")
