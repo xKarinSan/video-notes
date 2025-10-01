@@ -10,9 +10,10 @@ import { createPortal } from "react-dom";
 
 interface ApiKeyModalProps {
     children?: React.ReactNode;
+    handleKeyChange?: (key: string) => void;
 }
 
-function ApiKeyModal({ children }: ApiKeyModalProps) {
+function ApiKeyModal({ children, handleKeyChange }: ApiKeyModalProps) {
     const dialogRef = useRef<HTMLDialogElement | null>(null);
     const [mounted, setMounted] = useState(false);
 
@@ -36,6 +37,9 @@ function ApiKeyModal({ children }: ApiKeyModalProps) {
     async function saveOpenAIApiKey() {
         try {
             await window.settings?.setOpenAIKey(apiKey);
+            if (handleKeyChange) {
+                handleKeyChange(apiKey);
+            }
             toast.success("OpenAI API key saved.");
             dialogRef.current?.close();
         } catch (e) {
@@ -153,14 +157,14 @@ function ApiKeyModal({ children }: ApiKeyModalProps) {
                         <button
                             type="button"
                             onClick={saveOpenAIApiKey}
-                            className="btn btn-primary"
+                            className="btn bg-blue-700"
                         >
                             Save
                         </button>
                     </div>
                 </div>
             </div>
-            <form method="dialog" className="modal-backdrop">
+            <form method="dialog" className="modal-backdrop bg-black/80">
                 <button>close</button>
             </form>
         </dialog>
