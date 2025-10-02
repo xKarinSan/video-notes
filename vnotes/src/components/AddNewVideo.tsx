@@ -12,14 +12,13 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     const [uploadedVideoThumbnailUrl, setUploadedVideoThumbnailUrl] =
         useState("");
     const [uploadVideoDuration, setUploadVideoDuration] = useState(-1);
-
     const [isUploading, setIsUploading] = useState(false);
     const fileUploadRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     async function addYoutubeVideo() {
         try {
-            toast.info("Video uploading in progress...");
+            toast.info("Retrieving Youtube Video in progress...");
             setIsUploading(true);
             const res = await window.api.addYoutubeVideo(youtubeVideoUrl);
             console.log("addYoutubeVideo | res", res);
@@ -38,7 +37,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
             }
         } catch (e) {
             console.log("addYoutubeVideo | e", e);
-            toast.error(e);
+            toast.error("Failed to upload video");
         } finally {
             setIsUploading(false);
         }
@@ -165,60 +164,84 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
         <div>
             <div className="card bg-base-300 w-96 shadow-sm m-auto ">
                 <div className="card-body">
-                    <h2 className="card-title">Add New Video</h2>
-                    <p>
-                        <p className="m-1">Youtube Video:</p>
+                    <h2 className="text-2xl px-2">Add New Video</h2>
+                    <div className="tabs tabs-border">
                         <input
-                            type="text"
-                            placeholder="Enter/Paste Youtube Video URL"
-                            className="input w-full"
-                            onChange={(e) => setYoutubeVideoURL(e.target.value)}
-                            value={youtubeVideoUrl}
+                            type="radio"
+                            name="uploadOption"
+                            className="tab cursor-pointer"
+                            aria-label="YouTube"
+                            defaultChecked
                         />
-                        <button
-                            className={"btn bg-blue-700 m-auto w-full mt-2"}
-                            onClick={() => addYoutubeVideo()}
-                            disabled={isUploading}
-                        >
-                            {isUploading ? "Adding..." : "Add Youtube Video"}
-                        </button>
-                    </p>
-                    <label className="m-auto">or</label>
-                    <p>
-                        <p className="m-1">User upload (MP4):</p>
+                        <div className="tab-content p-2">
+                            <p className="text-xl my-2">YouTube Link</p>
+                            <input
+                                type="text"
+                                placeholder="Paste full YouTube link here (e.g., https://youtu.be/abc123)"
+                                className="input w-full"
+                                onChange={(e) =>
+                                    setYoutubeVideoURL(e.target.value)
+                                }
+                                value={youtubeVideoUrl}
+                            />
+                            <button
+                                className={"btn bg-blue-700 m-auto w-full mt-2"}
+                                onClick={() => addYoutubeVideo()}
+                                disabled={isUploading}
+                            >
+                                {isUploading ? "Adding..." : "Upload"}
+                            </button>
+                        </div>
                         <input
-                            type="file"
-                            accept=".mp4"
-                            placeholder="Upload file"
-                            className="file-input w-full"
-                            multiple={false}
-                            ref={fileUploadRef}
-                            onChange={(e) => handleFileUpload(e)}
+                            type="radio"
+                            name="uploadOption"
+                            className="tab cursor-pointer"
+                            aria-label="User Upload"
                         />
-
-                        <video
-                            className="m-auto"
-                            hidden={uploadedFileUrl ? false : true}
-                            ref={videoRef}
-                            src={uploadedFileUrl}
-                            playsInline
-                            controls={true}
-                        ></video>
-                        <button
-                            className={"btn bg-blue-700 m-auto w-full mt-2"}
-                            onClick={() => uploadVideoFile()}
-                            disabled={isUploading}
-                        >
-                            {isUploading ? "Adding..." : "Upload"}
-                        </button>
-                        <button
-                            className={"btn bg-red-700 m-auto w-full mt-2"}
-                            onClick={() => cancelUploadFile()}
-                            disabled={isUploading}
-                        >
-                            Cancel
-                        </button>
-                    </p>
+                        <div className="tab-content p-2">
+                            <p className="text-xl my-2">Upload MP4</p>
+                            <div className="flex items-center gap-1">
+                                <input
+                                    type="file"
+                                    accept=".mp4"
+                                    placeholder="Upload file"
+                                    className="file-input m-auto w-full"
+                                    multiple={false}
+                                    ref={fileUploadRef}
+                                    onChange={(e) => handleFileUpload(e)}
+                                />
+                                <button
+                                    className={
+                                        "btn btn-outline btn-error px-3 py-1"
+                                    }
+                                    onClick={() => cancelUploadFile()}
+                                    disabled={isUploading}
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                            <button
+                                className={"btn bg-blue-700 m-auto w-full my-2"}
+                                onClick={() => uploadVideoFile()}
+                                disabled={isUploading}
+                            >
+                                {isUploading ? "Adding..." : "Upload"}
+                            </button>
+                            {uploadedFileUrl ? (
+                                <>
+                                    <video
+                                        className="m-auto"
+                                        ref={videoRef}
+                                        src={uploadedFileUrl}
+                                        playsInline
+                                        controls={true}
+                                    ></video>
+                                </>
+                            ) : (
+                                <></>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

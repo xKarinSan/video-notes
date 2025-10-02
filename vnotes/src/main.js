@@ -153,7 +153,6 @@ ipcMain.handle("get-all-metadata", async () => {
                 console.log("e", e);
                 data = {};
             }
-            console.log("get-all-metadata | data", data);
             return data;
         })
     );
