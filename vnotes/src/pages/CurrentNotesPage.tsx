@@ -31,6 +31,8 @@ function CurrentNotesPage() {
     const [snapshotIdDict, setSnapshotIdDict] = useState({});
 
     const videoRef = useRef<HTMLVideoElement>(null);
+    const nameChangeRef = useRef<HTMLInputElement>(null);
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -78,6 +80,32 @@ function CurrentNotesPage() {
             }
         };
     }, [notesId, currentNotes]);
+
+
+    async function handleClick(event: MouseEvent) {
+        // if click does NOT include the ref, fullstop.
+        if (
+            nameChangeRef.current &&
+            !nameChangeRef.current.contains(event.target as Node)
+        ) {
+            await window.notes.saveCurrentNotes(
+                notesId,
+                currentNotesMetadata,
+                currentNotes,
+                snapshotIdDict
+            );
+            setIsEditingName(false);
+        }
+    }
+
+    useEffect(() => {
+        document.addEventListener("mousedown", handleClick, { capture: true });
+        return () => {
+            document.removeEventListener("mousedown", handleClick, {
+                capture: true,
+            });
+        };
+    }, []);
 
     function startEditing(note: NotesItem) {
         setEditingNoteId(note.id);
@@ -248,7 +276,7 @@ function CurrentNotesPage() {
             error: "Notes failed to delete.",
         });
     }
-    
+
     return (
         <div className="flex flex-col items-center justify-center">
             <div className="flex justify-start m-2 w-full">
@@ -392,7 +420,8 @@ function CurrentNotesPage() {
                         {isEditingName ? (
                             <>
                                 <input
-                                    className="input my-5 ml-5"
+                                    ref={nameChangeRef}
+                                    className="input my-5 w-full"
                                     value={currentNotesMetadata?.title}
                                     onChange={(e) => {
                                         setCurrentNotesMetadata({
@@ -427,7 +456,10 @@ function CurrentNotesPage() {
                             </>
                         ) : (
                             <>
-                                <h1 className="card-title text-2xl font-bold my-5 ml-5">
+                                <h1
+                                    className="card-title text-2xl font-bold my-5 ml-5"
+                                    onClick={() => setIsEditingName(true)}
+                                >
                                     {currentNotesMetadata?.title ?? "N/A"}
                                 </h1>
                                 <svg
@@ -448,7 +480,7 @@ function CurrentNotesPage() {
                             </>
                         )}
                     </div>
-
+                    <hr />
                     <div className="overflow-y-auto max-h-[60vh]">
                         {currentNotes.map((note: NotesItem, idx) => {
                             const { timestamp, content, isSnapshot, id } = note;

@@ -380,9 +380,9 @@ ipcMain.handle("get-current-video", async (_, videoId) => {
     };
 });
 
-ipcMain.handle("create-new-notes", async (_, videoId) => {
+ipcMain.handle("create-new-notes", async (_, videoId, videoName) => {
     try {
-        const newNotes = await createNotesMetadata(videoId);
+        const newNotes = await createNotesMetadata(videoId, videoName);
         if (!newNotes) {
             return null;
         }

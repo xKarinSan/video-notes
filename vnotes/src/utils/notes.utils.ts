@@ -11,19 +11,22 @@ import {
 import { Video } from "../classes/Video";
 import { downloadVideoMetadata } from "./youtubeVideo.utils";
 
-async function createNotesMetadata(videoId) {
+async function createNotesMetadata(videoId: string, videoName: string) {
     try {
         const notesId = randomUUID();
         const notesMetadata: NotesMetadata = {
             id: notesId,
             videoId: videoId,
-            title: "New Notes",
+            title: `Notes for ${videoName}`,
             createdDate: Date.now(),
             lastEdited: -1,
         };
         await ensureDir(PATHS.NOTES_DIR);
 
-        let notesMetadataFilePath = path.join(PATHS.NOTES_DIR, `${notesId}.json`);
+        let notesMetadataFilePath = path.join(
+            PATHS.NOTES_DIR,
+            `${notesId}.json`
+        );
         let notesMetadataString = JSON.stringify(notesMetadata, null, 2);
 
         await fsp.writeFile(notesMetadataFilePath, notesMetadataString);
@@ -43,7 +46,10 @@ async function createNotesMetadata(videoId) {
 async function saveNotesMetadata(notesId, notesMetadata) {
     try {
         notesMetadata.lastEdited = Date.now();
-        let notesMetadataFilePath = path.join(PATHS.NOTES_DIR, `${notesId}.json`);
+        let notesMetadataFilePath = path.join(
+            PATHS.NOTES_DIR,
+            `${notesId}.json`
+        );
         let notesMetadataString = JSON.stringify(notesMetadata, null, 2);
         await fsp.writeFile(notesMetadataFilePath, notesMetadataString);
         return true;
@@ -78,7 +84,10 @@ async function deleteNotesMetadata(notesIdList) {
 
 async function deleteNotesMetadataById(noteId) {
     try {
-        const notesMetadataFilePath = path.join(PATHS.NOTES_DIR, `${noteId}.json`);
+        const notesMetadataFilePath = path.join(
+            PATHS.NOTES_DIR,
+            `${noteId}.json`
+        );
         const notesMetadata: NotesMetadata = await getNotesMetadataById(noteId);
         if (!notesMetadata) {
             return false;

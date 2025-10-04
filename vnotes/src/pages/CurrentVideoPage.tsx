@@ -41,8 +41,12 @@ function CurrentVideoPage() {
 
     async function createNewNotes() {
         setIsCreating(true);
+        if (!currentVideo) {
+            return;
+        }
+        const { name } = currentVideo;
         await window.notes
-            .createNewNotes(videoId)
+            .createNewNotes(videoId, name)
             .then((newNotes) => {
                 setIsCreating(false);
 

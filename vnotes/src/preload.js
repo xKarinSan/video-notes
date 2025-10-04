@@ -35,7 +35,6 @@ function bufferDictToUrlMap(dict) {
 }
 
 contextBridge.exposeInMainWorld("api", {
-
     listMetadata: async () => {
         let allMetadata = await ipcRenderer.invoke("get-all-metadata");
         allMetadata.forEach((item) => {
@@ -88,8 +87,8 @@ contextBridge.exposeInMainWorld("api", {
 });
 
 contextBridge.exposeInMainWorld("notes", {
-    createNewNotes: async (videoId) =>
-        await ipcRenderer.invoke("create-new-notes", videoId),
+    createNewNotes: async (videoId, videoName) =>
+        await ipcRenderer.invoke("create-new-notes", videoId, videoName),
     getCurrentNotes: async (notesId) => {
         const result = await ipcRenderer.invoke("get-current-notes", notesId);
         if (!result) return null;
