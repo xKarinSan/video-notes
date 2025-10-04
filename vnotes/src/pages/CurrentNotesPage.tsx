@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { buildPdf } from "../utils/pdfExport.utils";
 import { NotesHeading } from "../classes/Pdf";
 import { formatTimestamp } from "../utils/timestamp.utils";
+import VideoPlayer from "../components/VideoPlayer";
 
 function CurrentNotesPage() {
     const { notesId } = useParams();
@@ -29,7 +30,7 @@ function CurrentNotesPage() {
     // value: generated URL
     const [snapshotIdDict, setSnapshotIdDict] = useState({});
 
-    const videoRef = useRef();
+    const videoRef = useRef<HTMLVideoElement>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -247,7 +248,7 @@ function CurrentNotesPage() {
             error: "Notes failed to delete.",
         });
     }
-
+    
     return (
         <div className="flex flex-col items-center justify-center">
             <div className="flex justify-start m-2 w-full">
@@ -260,32 +261,24 @@ function CurrentNotesPage() {
                     ← Back
                 </button>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 w-full">
-                {/* Left column */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 m-2">
+                {/* left column */}
                 <div className="flex flex-col items-center">
                     <div className="card w-full bg-base-500 shadow-xl">
-                        <div className="card-body items-center text-center">
-                            {isLoading ? (
-                                <span className="loading loading-spinner loading-lg mt-6"></span>
-                            ) : (
-                                <video
-                                    className="rounded-lg border border-base-300 mt-4"
-                                    ref={videoRef}
-                                    controls
-                                >
-                                    <source
-                                        src={currentVideoFilePath}
-                                        type="video/mp4"
-                                    />
-                                </video>
-                            )}
-                        </div>
-                        <h2 className="m-2 px-4 text-left">
+                        <h2 className="text-3xl m-2 px-4 text-left">
                             {currentVideo?.name ?? "N/A"}
                         </h2>
-                        <h2 className="m-2 px-4 text-left">
+                        <h2 className="text-md m-2 px-4 text-left">
                             Uploaded on: {currentVideoDate}
                         </h2>
+                        {isLoading ? (
+                            <span className="loading loading-spinner loading-lg mt-6"></span>
+                        ) : (
+                            <VideoPlayer
+                                videoRef={videoRef}
+                                videoFilePath={currentVideoFilePath}
+                            />
+                        )}
                     </div>
 
                     <div className="flex flex-wrap my-2">
@@ -295,7 +288,6 @@ function CurrentNotesPage() {
                                 captureSnapshot();
                             }}
                         >
-                            {/* Camera icon */}
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
@@ -393,19 +385,6 @@ function CurrentNotesPage() {
                             {isDeleting ? "Deleting..." : "Delete Notes"}
                         </button>
                     </div>
-
-                    <textarea
-                        className="textarea textarea-bordered w-full mt-4"
-                        placeholder="Type your note here..."
-                        value={currentNotesContent}
-                        onChange={(e) => setCurrentNotesContent(e.target.value)}
-                    ></textarea>
-                    <button
-                        className="btn bg-blue-700 mt-2 w-full"
-                        onClick={addNoteContent}
-                    >
-                        Add Note
-                    </button>
                 </div>
 
                 <div>
@@ -470,7 +449,7 @@ function CurrentNotesPage() {
                         )}
                     </div>
 
-                    <div className="overflow-y-auto max-h-[80vh]">
+                    <div className="overflow-y-auto max-h-[60vh]">
                         {currentNotes.map((note: NotesItem, idx) => {
                             const { timestamp, content, isSnapshot, id } = note;
                             return (
@@ -573,6 +552,18 @@ function CurrentNotesPage() {
                             );
                         })}
                     </div>
+                    <textarea
+                        className="textarea textarea-bordered w-full mt-4"
+                        placeholder="Type your note here..."
+                        value={currentNotesContent}
+                        onChange={(e) => setCurrentNotesContent(e.target.value)}
+                    ></textarea>
+                    <button
+                        className="btn bg-blue-700 mt-2 w-full"
+                        onClick={addNoteContent}
+                    >
+                        Add Note
+                    </button>
                 </div>
             </div>
         </div>

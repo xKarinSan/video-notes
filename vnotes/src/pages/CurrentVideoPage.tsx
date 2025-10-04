@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Video } from "../classes/Video";
 import { NotesMetadata } from "../classes/Notes";
 import { toast } from "react-toastify";
 import NotesListComponent from "../components/NotesListComponent";
+import VideoPlayer from "../components/VideoPlayer";
 
 function CurrentVideoPage() {
     const { videoId } = useParams();
@@ -16,6 +17,7 @@ function CurrentVideoPage() {
     const [currentNotesMetadataList, setCurrentNotesMetadataList] = useState<
         NotesMetadata[]
     >([]);
+    const videoRef = useRef<HTMLVideoElement>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -113,6 +115,7 @@ function CurrentVideoPage() {
             error: "Failed to delete notes.",
         });
     }
+
     return (
         <div className="flex flex-col items-center justify-center">
             <div className="flex flejustify-start m-2 w-full">
@@ -133,15 +136,10 @@ function CurrentVideoPage() {
                         <span className="loading loading-spinner loading-lg mt-6"></span>
                     ) : (
                         <>
-                            <video
-                                className="rounded-lg border border-base-300 mt-4"
-                                controls
-                            >
-                                <source
-                                    src={currentVideoFilePath}
-                                    type="video/mp4"
-                                />
-                            </video>
+                            <VideoPlayer
+                                videoFilePath={currentVideoFilePath}
+                                videoRef={videoRef}
+                            />
                             <div className="flex mt-4 gap-2">
                                 <button
                                     className={`btn bg-blue-700 w-fit text-white flex items-center ${
