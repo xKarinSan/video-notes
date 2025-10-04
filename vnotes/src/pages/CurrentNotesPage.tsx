@@ -81,9 +81,8 @@ function CurrentNotesPage() {
         };
     }, [notesId, currentNotes]);
 
-
     async function handleClick(event: MouseEvent) {
-        // if click does NOT include the ref, fullstop.
+        // if inside input ref, disable video seeking
         if (
             nameChangeRef.current &&
             !nameChangeRef.current.contains(event.target as Node)
@@ -276,6 +275,26 @@ function CurrentNotesPage() {
             error: "Notes failed to delete.",
         });
     }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === "Enter" && event.shiftKey) {
+            event.preventDefault();
+            if (editContent) {
+                saveEditedNote();
+            } else {
+                addNoteContent();
+            }
+        }
+    };
+
+    useEffect(() => {
+        document.addEventListener("keydown", handleKeyDown, { capture: true });
+        return () => {
+            document.removeEventListener("keydown", handleKeyDown, {
+                capture: true,
+            });
+        };
+    }, [handleKeyDown]);
 
     return (
         <div className="flex flex-col items-center justify-center">
@@ -573,10 +592,25 @@ function CurrentNotesPage() {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="flex justify-between items-center">
-                                                <p className="my-2">
-                                                    {content}
-                                                </p>
+                                            <div
+                                                className=""
+                                                onClick={() =>
+                                                    startEditing(note)
+                                                }
+                                            >
+                                                {content
+                                                    .split("\n")
+                                                    .map((line: string) => {
+                                                        console.log(
+                                                            "line",
+                                                            line
+                                                        );
+                                                        return (
+                                                            <p className="my-2">
+                                                                {line}
+                                                            </p>
+                                                        );
+                                                    })}
                                             </div>
                                         )}
                                     </div>
@@ -586,7 +620,7 @@ function CurrentNotesPage() {
                     </div>
                     <textarea
                         className="textarea textarea-bordered w-full mt-4"
-                        placeholder="Type your note here..."
+                        placeholder="Write your notes here... (Press Shift + Enter to save)"
                         value={currentNotesContent}
                         onChange={(e) => setCurrentNotesContent(e.target.value)}
                     ></textarea>
