@@ -96,29 +96,6 @@ function CurrentVideoPage() {
         });
     }
 
-    async function deleteCurrentNotes(notesId: string) {
-        if (!confirm("Are you sure you want to delete this notes?")) {
-            return;
-        }
-        try {
-            const deleted = await window.notes.deleteNotesMetadataById(notesId);
-            if (deleted) {
-                setCurrentNotesMetadataList((prev) =>
-                    prev.filter((note) => note.id !== notesId)
-                );
-            }
-        } catch (e) {
-            console.error("Delete video error:", e);
-        }
-    }
-
-    function handleDeleteCurrentNotes(notesId: string) {
-        toast.promise(deleteCurrentNotes(notesId), {
-            pending: "Deleting notes in progress..",
-            success: "Notes deleted successfully.",
-            error: "Failed to delete notes.",
-        });
-    }
 
     return (
         <div className="flex flex-col items-center justify-center">
@@ -175,10 +152,10 @@ function CurrentVideoPage() {
                                     )}
                                     {isCreating
                                         ? "Creating..."
-                                        : "Create New Notes"}
+                                        : "New Note"}
                                 </button>
                                 <button
-                                    className={`btn bg-red-700 w-fit text-white flex items-center ${
+                                    className={`btn bg-blue-900 w-fit text-white flex items-center ${
                                         isDeleting ? "loading btn-disabled" : ""
                                     }`}
                                     onClick={handleDeleteVideo}
@@ -212,7 +189,6 @@ function CurrentVideoPage() {
             <div>
                 <NotesListComponent
                     notesMetadataList={currentNotesMetadataList}
-                    deleteNotes={handleDeleteCurrentNotes}
                 />
             </div>
         </div>

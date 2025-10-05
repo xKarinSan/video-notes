@@ -7,7 +7,10 @@ import { ensureDir, fileExists } from "./files.utils";
 async function writeNotesItem(notesId: string, notes: NotesItem[]) {
     try {
         await ensureDir(PATHS.NOTES_ITEM_DIR);
-        const notesItemFilePath = path.join(PATHS.NOTES_ITEM_DIR, `${notesId}.json`);
+        const notesItemFilePath = path.join(
+            PATHS.NOTES_ITEM_DIR,
+            `${notesId}.json`
+        );
         notes.map((note: NotesItem) => {
             note.content = note.snapshotId ?? note.content;
         });
@@ -21,9 +24,12 @@ async function writeNotesItem(notesId: string, notes: NotesItem[]) {
     }
 }
 
-async function readNotesItem(notesId) {
+async function readNotesItem(notesId: string) {
     try {
-        const notesItemFilePath = path.join(PATHS.NOTES_ITEM_DIR, `${notesId}.json`);
+        const notesItemFilePath = path.join(
+            PATHS.NOTES_ITEM_DIR,
+            `${notesId}.json`
+        );
         const notesItemExists = await fsp
             .access(notesItemFilePath)
             .then(() => true)
@@ -40,7 +46,7 @@ async function readNotesItem(notesId) {
     }
 }
 
-async function deleteNotesFromList(notesIdList) {
+async function deleteNotesFromList(notesIdList: string[]) {
     try {
         await ensureDir(PATHS.NOTES_ITEM_DIR);
         for (const notesId of notesIdList) {
@@ -66,7 +72,10 @@ async function deleteNotesFromList(notesIdList) {
 
 async function deleteNotesItemById(notesId) {
     try {
-        const notesItemFilePath = path.join(PATHS.NOTES_ITEM_DIR, `${notesId}.json`);
+        const notesItemFilePath = path.join(
+            PATHS.NOTES_ITEM_DIR,
+            `${notesId}.json`
+        );
         await fsp.unlink(notesItemFilePath);
         return true;
     } catch (e) {

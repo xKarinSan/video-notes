@@ -328,116 +328,13 @@ function CurrentNotesPage() {
                         )}
                     </div>
 
-                    <div className="flex flex-wrap my-2">
-                        <button
-                            className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
-                            onClick={() => {
-                                captureSnapshot();
-                            }}
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                className="w-5 h-5"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M3 7.5h3l1.5-2h9l1.5 2h3a1.5 1.5 0 011.5 1.5v9a1.5 1.5 0 01-1.5 1.5H3a1.5 1.5 0 01-1.5-1.5v-9A1.5 1.5 0 013 7.5z"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z"
-                                />
-                            </svg>
-                            Capture Snapshot
-                        </button>
-
-                        <button
-                            className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
-                            disabled={isGeneratingSummary}
-                            onClick={() => {
-                                handleGenerateAiSummary();
-                            }}
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                className="w-5 h-5"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M13 2L3 14h7v8l11-12h-7V2z"
-                                />
-                            </svg>
-                            Generate AI Notes
-                        </button>
-
-                        <button
-                            className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
-                            onClick={exportToPdf}
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                className="w-5 h-5"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M19.5 21H6.75A2.25 2.25 0 014.5 18.75V5.25A2.25 2.25 0 016.75 3h6.75l6 6v9.75A2.25 2.25 0 0119.5 21z"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 3v6h6"
-                                />
-                            </svg>
-                            Export to PDF
-                        </button>
-                        <button
-                            className={`btn bg-red-700 mx-1  w-fit text-white flex items-center gap-2 ${
-                                isDeleting ? "loading btn-disabled" : ""
-                            }`}
-                            onClick={handleDeleteCurrentNotes}
-                            disabled={isDeleting}
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={2}
-                                stroke="currentColor"
-                                className="w-5 h-5"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 
-                   01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0V5a2 2 0 
-                   012-2h2a2 2 0 012 2v2m-7 0h8"
-                                />
-                            </svg>
-                            {isDeleting ? "Deleting..." : "Delete Notes"}
-                        </button>
-                    </div>
+                    <div className="flex flex-wrap my-2"></div>
                 </div>
 
                 <div>
-                    <div className="flex items-center">
-                        {isEditingName ? (
-                            <>
+                    <div className="grid items-center">
+                        <div>
+                            {isEditingName ? (
                                 <input
                                     ref={nameChangeRef}
                                     className="input my-5 w-full"
@@ -449,56 +346,123 @@ function CurrentNotesPage() {
                                         });
                                     }}
                                 />
-                                <svg
-                                    onClick={async () => {
-                                        await window.notes.saveCurrentNotes(
-                                            notesId,
-                                            currentNotesMetadata,
-                                            currentNotes,
-                                            snapshotIdDict
-                                        );
-                                        setIsEditingName(false);
-                                    }}
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5 text-gray-600 hover:cursor-pointer"
-                                    fill="none"
-                                    viewBox="0 0 12 24"
-                                    stroke="currentColor"
-                                    strokeWidth={1}
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM5 13v6h6l8-8-6-6-8 8z"
-                                    />
-                                </svg>
-                            </>
-                        ) : (
-                            <>
+                            ) : (
                                 <h1
                                     className="card-title text-2xl font-bold my-5 ml-5"
                                     onClick={() => setIsEditingName(true)}
                                 >
                                     {currentNotesMetadata?.title ?? "N/A"}
                                 </h1>
+                            )}
+                        </div>
+                        <div className="flex">
+                            <button
+                                className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
+                                onClick={() => {
+                                    captureSnapshot();
+                                }}
+                            >
                                 <svg
-                                    onClick={() => setIsEditingName(true)}
                                     xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5 text-gray-600 hover:cursor-pointer"
                                     fill="none"
-                                    viewBox="0 0 12 24"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
                                     stroke="currentColor"
-                                    strokeWidth={1}
+                                    className="w-5 h-5"
                                 >
                                     <path
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
-                                        d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM5 13v6h6l8-8-6-6-8 8z"
+                                        d="M3 7.5h3l1.5-2h9l1.5 2h3a1.5 1.5 0 011.5 1.5v9a1.5 1.5 0 01-1.5 1.5H3a1.5 1.5 0 01-1.5-1.5v-9A1.5 1.5 0 013 7.5z"
+                                    />
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z"
                                     />
                                 </svg>
-                            </>
-                        )}
+                                Snapshot
+                            </button>
+                            <button
+                                className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
+                                disabled={isGeneratingSummary}
+                                onClick={() => {
+                                    handleGenerateAiSummary();
+                                }}
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
+                                    stroke="currentColor"
+                                    className="w-5 h-5"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M13 2L3 14h7v8l11-12h-7V2z"
+                                    />
+                                </svg>
+                                AI Notes
+                            </button>
+
+                            <button
+                                className="btn bg-blue-700 mx-1 w-fit text-white flex items-center gap-2"
+                                onClick={exportToPdf}
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
+                                    stroke="currentColor"
+                                    className="w-5 h-5"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M19.5 21H6.75A2.25 2.25 0 014.5 18.75V5.25A2.25 2.25 0 016.75 3h6.75l6 6v9.75A2.25 2.25 0 0119.5 21z"
+                                    />
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 3v6h6"
+                                    />
+                                </svg>
+                                Export
+                            </button>
+
+                            <button
+                                className={`btn bg-blue-900 mx-1 w-fit text-white flex items-center gap-2 ${
+                                    isDeleting
+                                        ? "opacity-70 cursor-not-allowed"
+                                        : ""
+                                }`}
+                                onClick={handleDeleteCurrentNotes}
+                                disabled={isDeleting}
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={2}
+                                    stroke="currentColor"
+                                    className="w-5 h-5"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 
+                   01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0V5a2 2 0 
+                   012-2h2a2 2 0 012 2v2m-7 0h8"
+                                    />
+                                </svg>
+                                {isDeleting ? "Deleting..." : "Delete All"}
+                            </button>
+                        </div>
                     </div>
+                    <br />
                     <hr />
                     <div className="overflow-y-auto max-h-[60vh]">
                         {currentNotes.map((note: NotesItem, idx) => {
@@ -523,19 +487,6 @@ function CurrentNotesPage() {
                                                       formatTimestamp(timestamp)
                                                     : ""}
                                             </p>
-                                            {!isSnapshot &&
-                                            !(editingNoteId === id) ? (
-                                                <button
-                                                    className="btn btn-xs bg-blue-700"
-                                                    onClick={() =>
-                                                        startEditing(note)
-                                                    }
-                                                >
-                                                    Edit
-                                                </button>
-                                            ) : (
-                                                <></>
-                                            )}
                                             <button
                                                 className="btn btn-black btn-xs btn-square"
                                                 onClick={() =>
@@ -618,18 +569,29 @@ function CurrentNotesPage() {
                             );
                         })}
                     </div>
-                    <textarea
-                        className="textarea textarea-bordered w-full mt-4"
-                        placeholder="Write your notes here... (Press Shift + Enter to save)"
-                        value={currentNotesContent}
-                        onChange={(e) => setCurrentNotesContent(e.target.value)}
-                    ></textarea>
-                    <button
-                        className="btn bg-blue-700 mt-2 w-full"
-                        onClick={addNoteContent}
-                    >
-                        Add Note
-                    </button>
+                    <div className="flex  mt-2">
+                        <textarea
+                            className="textarea textarea-bordered w-full"
+                            placeholder="Write your notes here... (Press Shift + Enter to save)"
+                            value={currentNotesContent}
+                            onChange={(e) =>
+                                setCurrentNotesContent(e.target.value)
+                            }
+                        ></textarea>
+                        <button
+                            className="btn bg-blue-700 w-fit"
+                            onClick={addNoteContent}
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                                className="w-5 h-5"
+                            >
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
