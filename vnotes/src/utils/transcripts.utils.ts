@@ -47,7 +47,7 @@ async function writeYoutubeTranscript(
     }
 }
 
-async function deleteTranscript(videoId) {
+async function deleteTranscript(videoId: string) {
     try {
         await ensureDir(PATHS.TRANSCRIPTS_DIR);
         await ensureDir(PATHS.TIMESTAMPED_TRANSCRIPTS_DIR);
@@ -76,7 +76,7 @@ async function deleteTranscript(videoId) {
     }
 }
 
-async function getTextTranscript(videoId) {
+async function getTextTranscript(videoId: string) {
     const videoTranscriptTextPath = path.join(
         PATHS.TRANSCRIPTS_DIR,
         `${videoId}.txt`
@@ -96,7 +96,7 @@ async function getTextTranscript(videoId) {
     return notesItemContent;
 }
 
-async function extractAudio(videoPath, videoId) {
+async function extractAudio(videoPath: string, videoId: string) {
     const tempDir = path.join(PATHS.USER_DATA_BASE + "/temp");
     await ensureDir(tempDir);
     const tempPath = path.join(tempDir, `${videoId}.mp3`);
@@ -131,10 +131,9 @@ async function extractAudio(videoPath, videoId) {
     });
 }
 
-async function writeTranscriptFallback(videoId, openAIKey) {
+async function writeTranscriptFallback(videoId: string, openAIKey: string) {
     let audioPath: string | null = null;
     try {
-        console.log("writeTranscriptFallback | started");
         let openaiClient = new OpenAI({ apiKey: openAIKey });
 
         const videoFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);

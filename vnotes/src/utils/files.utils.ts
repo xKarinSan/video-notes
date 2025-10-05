@@ -2,12 +2,13 @@ import fsp from "node:fs/promises";
 import { PATHS } from "../../const";
 import path from "node:path";
 import { NotesMetadata } from "../classes/Notes";
+import { PathLike } from "node:fs";
 
-async function ensureDir(directory) {
+async function ensureDir(directory: PathLike) {
     await fsp.mkdir(directory, { recursive: true });
 }
 
-async function fileExists(directory) {
+async function fileExists(directory: PathLike) {
     try {
         await fsp.access(directory);
         return true;
@@ -16,7 +17,7 @@ async function fileExists(directory) {
     }
 }
 
-async function getVideoMetadataById(videoId) {
+async function getVideoMetadataById(videoId: string) {
     try {
         const videoMetadataDirectory = path.join(
             PATHS.METADATA_DIR,
@@ -37,7 +38,7 @@ async function getVideoMetadataById(videoId) {
     }
 }
 
-async function getVideoPathById(videoId) {
+async function getVideoPathById(videoId: string) {
     try {
         const videoFileDirectory = path.join(
             PATHS.VIDEOS_DIR,
@@ -53,7 +54,7 @@ async function getVideoPathById(videoId) {
     }
 }
 
-async function getNotesMetadataById(notesId) {
+async function getNotesMetadataById(notesId: string) {
     try {
         const notesMetadataDirectory = path.join(
             PATHS.NOTES_DIR,
@@ -97,8 +98,6 @@ async function getAllNotesMetadata() {
     }
 }
 
-async function extractMp3(mp4File) {}
-
 export {
     ensureDir,
     fileExists,
@@ -106,5 +105,4 @@ export {
     getVideoPathById,
     getNotesMetadataById,
     getAllNotesMetadata,
-    extractMp3,
 };

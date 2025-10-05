@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Video } from "../classes/Video";
 import { toast } from "react-toastify";
+import { FileUploader } from "react-drag-drop-files";
+
 type AddNewVideoProps = {
     onVideoAdded?: (video: Video) => void;
 };
@@ -15,13 +17,13 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
     const [isUploading, setIsUploading] = useState(false);
     const fileUploadRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const fileTypes = ["MP4"];
 
     async function addYoutubeVideo() {
         try {
             toast.info("Retrieving Youtube Video in progress...");
             setIsUploading(true);
             const res = await window.api.addYoutubeVideo(youtubeVideoUrl);
-            console.log("addYoutubeVideo | res", res);
             if (res) {
                 const { videoMetadata, existingVideo } = res;
                 if (existingVideo) {
@@ -78,7 +80,6 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                 uploadedFileName,
                 uploadVideoDuration
             );
-            console.log("uploadVideoFile | res", res);
 
             if (res) {
                 const { videoMetadata } = res;
@@ -108,57 +109,22 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
         }
     }
 
-    function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    function handleFileUpload(file: File | File[]) {
         // get the input from the video file
-        // get the temporary URL; turn it into binary cause smaller?
-        const files = e.target?.files;
-
-        if (files == null) return;
-        const currentFile = files[0];
-        const tempUrl = URL.createObjectURL(currentFile);
+        // get the temporary URL; turn it into binary cause smaller
+        const currFile = file as File;
+        if (file == null) return;
+        const tempUrl = URL.createObjectURL(currFile);
         setUploadedFileUrl(tempUrl);
-        setUploadedFileName(currentFile.name);
+        setUploadedFileName(currFile.name);
         toast.success("File successfully uploaded!");
     }
-
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        const handleLoadedMetadata = async () => {
-            console.log("Video duration:", video.duration);
-            console.log("videoRef.current", videoRef.current);
-            if (videoRef.current) {
-                setUploadVideoDuration(videoRef.current.duration);
-                const canvas: HTMLCanvasElement = document.createElement(
-                    "canvas"
-                ) as HTMLCanvasElement;
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext("2d");
-                ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob(
-                    (blob) => {
-                        if (!blob) {
-                            console.error("toBlob failed");
-                            return;
-                        }
-                        const url = URL.createObjectURL(blob);
-                        setUploadedVideoThumbnailUrl(url);
-                    },
-                    "image/jpeg",
-                    0.85
-                );
-                canvas.remove();
-            }
-        };
-
-        video.addEventListener("loadedmetadata", handleLoadedMetadata);
-
-        return () => {
-            video.removeEventListener("loadedmetadata", handleLoadedMetadata);
-        };
-    }, []);
+    function handleVideoLoadedMetadata(
+        e: React.SyntheticEvent<HTMLVideoElement>
+    ) {
+        const video = e.currentTarget;
+        setUploadVideoDuration(video.duration);
+    }
 
     return (
         <div>
@@ -189,7 +155,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                                 onClick={() => addYoutubeVideo()}
                                 disabled={isUploading}
                             >
-                                {isUploading ? "Adding..." : "Upload"}
+                                {isUploading ? "Adding..." : "Add"}
                             </button>
                         </div>
                         <input
@@ -200,33 +166,33 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                         />
                         <div className="tab-content p-2">
                             <p className="text-xl my-2">Upload MP4</p>
-                            <div className="flex items-center gap-1">
-                                <input
-                                    type="file"
-                                    accept=".mp4"
-                                    placeholder="Upload file"
-                                    className="file-input m-auto w-full"
+                            <div className="grid items-center gap-1">
+                                <FileUploader
+                                    handleChange={handleFileUpload}
+                                    label={"Drag a video here"}
+                                    classes={"w-1"}
                                     multiple={false}
-                                    ref={fileUploadRef}
-                                    onChange={(e) => handleFileUpload(e)}
+                                    name="file"
+                                    types={fileTypes}
                                 />
+                            </div>
+                            <div className="flex my-2">
                                 <button
-                                    className={
-                                        "btn btn-outline btn-error px-3 py-1"
-                                    }
+                                    className={"btn bg-blue-900 w-fit"}
                                     onClick={() => cancelUploadFile()}
                                     disabled={isUploading}
                                 >
                                     Remove
                                 </button>
+                                <button
+                                    className={"btn bg-blue-700 w-fit"}
+                                    onClick={() => uploadVideoFile()}
+                                    disabled={isUploading}
+                                >
+                                    {isUploading ? "Adding..." : "Add"}
+                                </button>
                             </div>
-                            <button
-                                className={"btn bg-blue-700 m-auto w-full my-2"}
-                                onClick={() => uploadVideoFile()}
-                                disabled={isUploading}
-                            >
-                                {isUploading ? "Adding..." : "Upload"}
-                            </button>
+
                             {uploadedFileUrl ? (
                                 <>
                                     <video
@@ -235,6 +201,9 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                                         src={uploadedFileUrl}
                                         playsInline
                                         controls={true}
+                                        onLoadedMetadata={
+                                            handleVideoLoadedMetadata
+                                        }
                                     ></video>
                                 </>
                             ) : (

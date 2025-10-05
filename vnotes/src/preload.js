@@ -39,9 +39,6 @@ contextBridge.exposeInMainWorld("api", {
         let allMetadata = await ipcRenderer.invoke("get-all-metadata");
         allMetadata.forEach((item) => {
             if (item.opName === "User" && item.thumbnail) {
-                console.log("listMetadata | thumbnail", item.thumbnail);
-                // get the bytes of the thumbnail
-
                 // convert the bytes into url
                 const u8 =
                     item.thumbnail instanceof Uint8Array
@@ -50,7 +47,6 @@ contextBridge.exposeInMainWorld("api", {
                 const blob = new Blob([u8], { type: "image/png" });
                 const blobUrl = URL.createObjectURL(blob);
                 item.thumbnail = blobUrl; // replace with temporary blob URL
-                console.log("listMetadata | blobUrl", blobUrl);
             }
         });
         return allMetadata;
