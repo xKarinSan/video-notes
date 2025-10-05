@@ -35,6 +35,7 @@ function CurrentNotesPage() {
 
     const navigate = useNavigate();
 
+    // on load
     useEffect(() => {
         (async () => {
             await window.notes
@@ -64,6 +65,8 @@ function CurrentNotesPage() {
         })();
     }, []);
 
+    // on save
+
     useEffect(() => {
         return () => {
             if (currentNotesMetadata && currentNotes) {
@@ -79,7 +82,7 @@ function CurrentNotesPage() {
                     });
             }
         };
-    }, [notesId, currentNotes]);
+    }, [notesId, currentNotes, snapshotIdDict, currentNotesMetadata]);
 
     async function handleClick(event: MouseEvent) {
         // if inside input ref, disable video seeking
@@ -142,23 +145,33 @@ function CurrentNotesPage() {
             content: currentNotesContent,
             timestamp: timestamp,
         };
-        setCurrentNotes(
+        setCurrentNotes((currentNotes) =>
             [...currentNotes, newNote].sort((a, b) => a.timestamp - b.timestamp)
         );
         setCurrentNotesContent("");
     }
 
-    function deleteNoteContent(id) {
-        const currentNote = currentNotes.find((note) => note.id === id);
-        if (currentNote) {
-            const snapshotId = currentNote.snapshotId;
-            if (snapshotId) {
-                const updatedSnapshotDict = { ...snapshotIdDict };
-                delete updatedSnapshotDict[snapshotId];
-                setSnapshotIdDict(updatedSnapshotDict);
-            }
-            setCurrentNotes(currentNotes.filter((note) => note.id !== id));
+    function deleteNoteContent(id: string) {
+        let snapshotToDelete: string | undefined;
+
+        // 1) Update notes and *extract* the related snapshotId in one pass
+        setCurrentNotes((prev) => {
+            const target = prev.find((n) => n.id === id);
+            snapshotToDelete = target?.snapshotId;
+            return prev.filter((n) => n.id !== id);
+        });
+
+        // 2) Now update the snapshot dict separately (no nested setState)
+        if (snapshotToDelete) {
+            setSnapshotIdDict((prevDict) => {
+                const next = { ...prevDict };
+                delete next[snapshotToDelete!];
+                return next;
+            });
         }
+
+        // optional: schedule a save
+        saveAll?.();
     }
 
     async function captureSnapshot() {
@@ -187,7 +200,7 @@ function CurrentNotesPage() {
             snapshotId: snapshotId,
         };
 
-        setCurrentNotes(
+        setCurrentNotes((currentNotes) =>
             [...currentNotes, timestampedSnapshot].sort(
                 (a, b) => a.timestamp - b.timestamp
             )
