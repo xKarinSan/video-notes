@@ -133,6 +133,9 @@ contextBridge.exposeInMainWorld("notes", {
         );
     },
 
+    // lets main process handle the close
+    requestForceClose: () => ipcRenderer.send("force-close"),
+
     getNotesByVideoId: async (videoId) =>
         await ipcRenderer.invoke("get-notes-by-videoid", videoId),
 

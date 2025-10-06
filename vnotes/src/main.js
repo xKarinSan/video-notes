@@ -100,7 +100,7 @@ const createWindow = async () => {
     const lastPath = store.get("lastPath", "/");
     // and load the index.html of the app.
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-        mainWindow.webContents.openDevTools();
+        // mainWindow.webContents.openDevTools();
         mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL + lastPath);
     } else {
         const indexPath = path.join(
@@ -481,6 +481,10 @@ ipcMain.handle(
         }
     }
 );
+
+ipcMain.on("force-close", () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy();
+});
 
 ipcMain.handle("get-notes-by-videoid", async (_, videoId) => {
     try {

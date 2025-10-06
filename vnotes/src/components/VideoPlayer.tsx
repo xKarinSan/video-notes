@@ -7,6 +7,16 @@ interface VideoPlayerProps {
 
 function VideoPlayer({ videoFilePath, videoRef }: VideoPlayerProps) {
     const handleKeyDown = (event: KeyboardEvent) => {
+        const target = e.target as HTMLElement | null;
+        const isEditable =
+            !!target &&
+            (target.closest(
+                'input, textarea, [contenteditable=""], [contenteditable="true"]'
+            ) ||
+                (target as HTMLElement).isContentEditable);
+
+        if (isEditable) return;
+        
         const STEP = 5;
         if (!videoRef.current) return;
         if (event.key === "ArrowLeft" || event.key === "ArrowRight") {

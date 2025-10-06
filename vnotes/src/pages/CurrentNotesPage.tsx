@@ -67,26 +67,29 @@ function CurrentNotesPage() {
 
     // on save
     useEffect(() => {
-        return () => {
-            if (currentNotesMetadata && currentNotes) {
-                window.notes
-                    .saveCurrentNotes(
-                        notesId,
-                        currentNotesMetadata,
-                        currentNotes,
-                        snapshotIdDict
-                    )
-                    .catch((err) => {
-                        console.error("Auto-save on exit failed:", err);
-                    });
-            }
-        };
-    }, [notesId, currentNotes, snapshotIdDict, currentNotesMetadata]);
+        if (!currentNotesMetadata || !currentNotes) return;
+        const id = setTimeout(async () => {
+            await window.notes
+                .saveCurrentNotes(
+                    notesId,
+                    currentNotesMetadata,
+                    currentNotes,
+                    snapshotIdDict
+                )
+                .catch((err) => console.error("Autosave failed:", err));
+        }, 1000); // adjust debounce
+        return () => clearTimeout(id);
+    }, [notesId, currentNotesMetadata, currentNotes, snapshotIdDict]);
 
     useEffect(() => {
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+        const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
+            // alert("Handle unload")
+            event.preventDefault();
+            console.log("CurrentNotesPage | handleBeforeUnload");
+            console.log("currentNotesMetadata", currentNotesMetadata);
+            console.log("currentNotes", currentNotes);
             if (currentNotesMetadata && currentNotes) {
-                window.notes
+                await window.notes
                     .saveCurrentNotes(
                         notesId,
                         currentNotesMetadata,
@@ -98,8 +101,8 @@ function CurrentNotesPage() {
                     });
             }
 
-            event.preventDefault();
-            event.returnValue = "";
+            window.notes.requestForceClose();
+            // event.returnValue = "";
         };
 
         window.addEventListener("beforeunload", handleBeforeUnload);
@@ -263,7 +266,7 @@ function CurrentNotesPage() {
         });
     }
 
-    function handleClickedTimestamp(timestamp) {
+    function handleClickedTimestamp(timestamp: number) {
         if (!videoRef.current || timestamp == -1) return;
         const video = videoRef.current;
         video.currentTime = timestamp;
