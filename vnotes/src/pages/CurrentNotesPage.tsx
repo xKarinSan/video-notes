@@ -66,7 +66,6 @@ function CurrentNotesPage() {
     }, []);
 
     // on save
-
     useEffect(() => {
         return () => {
             if (currentNotesMetadata && currentNotes) {
@@ -81,6 +80,31 @@ function CurrentNotesPage() {
                         console.error("Auto-save on exit failed:", err);
                     });
             }
+        };
+    }, [notesId, currentNotes, snapshotIdDict, currentNotesMetadata]);
+
+    useEffect(() => {
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            if (currentNotesMetadata && currentNotes) {
+                window.notes
+                    .saveCurrentNotes(
+                        notesId,
+                        currentNotesMetadata,
+                        currentNotes,
+                        snapshotIdDict
+                    )
+                    .catch((err) => {
+                        console.error("Auto-save before unload failed:", err);
+                    });
+            }
+
+            event.preventDefault();
+            event.returnValue = "";
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
         };
     }, [notesId, currentNotes, snapshotIdDict, currentNotesMetadata]);
 
@@ -169,9 +193,6 @@ function CurrentNotesPage() {
                 return next;
             });
         }
-
-        // optional: schedule a save
-        saveAll?.();
     }
 
     async function captureSnapshot() {
@@ -565,10 +586,6 @@ function CurrentNotesPage() {
                                                 {content
                                                     .split("\n")
                                                     .map((line: string) => {
-                                                        console.log(
-                                                            "line",
-                                                            line
-                                                        );
                                                         return (
                                                             <p className="my-2">
                                                                 {line}
