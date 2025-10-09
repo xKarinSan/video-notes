@@ -108,6 +108,7 @@ module.exports = {
                     {
                         name: "main_window",
                         config: "vite.renderer.config.mjs",
+                        assets: ["assets/**/*"],
                     },
                 ],
             },
