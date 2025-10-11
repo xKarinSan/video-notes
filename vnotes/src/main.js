@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, nativeImage } from "electron";
 import { fetchTranscript } from "youtube-transcript-plus";
 import { updateElectronApp, UpdateSourceType } from "update-electron-app";
 
@@ -62,6 +62,16 @@ import {
     setVideoThumbnail,
 } from "./utils/thumbnails.utils";
 
+function findIconPath() {
+    const candidates = [
+        path.join(process.resourcesPath, "assets", "icon.png"),
+        path.resolve(__dirname, "../../assets/icon.png"),
+        path.resolve(__dirname, "../assets/icon.png"),
+        path.join(app.getAppPath(), "assets", "icon.png"),
+    ];
+    return candidates.find((p) => fs.existsSync(p));
+}
+
 updateElectronApp({
     updateSource: {
         type: UpdateSourceType.ElectronPublicUpdateService,
@@ -100,7 +110,7 @@ const createWindow = async () => {
     const lastPath = store.get("lastPath", "/");
     // and load the index.html of the app.
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-        // mainWindow.webContents.openDevTools();
+        mainWindow.webContents.openDevTools();
         mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL + lastPath);
     } else {
         const indexPath = path.join(
@@ -185,10 +195,7 @@ ipcMain.handle(
             // get thumbnails
             const videoThumbnail = await setVideoThumbnail(videoId);
             const openAIKey = await store.get("settings.open_ai_key");
-            const transcriptText = await writeTranscriptFallback(
-                videoId,
-                openAIKey
-            );
+            const transcriptText = await writeTranscriptFallback(videoId);
             const savedTranscript = await writeFallbackTranscript(
                 videoId,
                 transcriptText
@@ -311,11 +318,7 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
             savedTranscript = await writeYoutubeTranscript(videoId, transcript);
         } catch (e) {
             console.log("add-youtube-video | e | before fallback", e);
-            const openAIKey = await store.get("settings.open_ai_key");
-            const transcriptText = await writeTranscriptFallback(
-                videoId,
-                openAIKey
-            );
+            const transcriptText = await writeTranscriptFallback(videoId);
             savedTranscript = await writeFallbackTranscript(
                 videoId,
                 transcriptText
@@ -652,10 +655,31 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
     if (process.platform === "darwin") {
-        const iconPath = app.isPackaged
-            ? path.join(process.resourcesPath, "assets", "icon.png")
-            : path.join(".", "assets", "icon.png");
-        app.dock.setIcon(iconPath);
+        // console.log("process.resourcesPath", process.resourcesPath);
+        // console.log("__dirname", __dirname);
+        // const base = app.isPackaged
+        //     ? process.resourcesPath
+        //     : path.join(__dirname, "..");
+
+        // const iconPath = path.join(base, "assets", "icon.png");
+        // app.dock.setIcon(iconPath);
+        const iconPath = findIconPath();
+        console.log("resourcesPath:", process.resourcesPath);
+        console.log("__dirname:", __dirname);
+        console.log("resolved dock icon:", iconPath);
+
+        if (!iconPath) {
+            console.warn("Dock icon not found in any candidate path.");
+            return;
+        }
+
+        const img = nativeImage.createFromPath(iconPath);
+        if (img.isEmpty()) {
+            console.warn("Dock icon loaded but empty:", iconPath);
+            return;
+        }
+
+        app.dock.setIcon(img);
     }
     createWindow();
     const rootDataPath = app.getPath("userData");

@@ -1,20 +1,28 @@
 import fsp from "node:fs/promises";
 import fs from "node:fs";
+import * as os from "os";
 import path from "node:path";
 import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
 import { TranscriptResponse } from "youtube-transcript-plus/dist/types";
-import OpenAI from "openai";
-// import ffmpegPath from "ffmpeg-static";
+import { whisper } from "whisper-node";
 import { spawn } from "child_process";
 import { createRequire } from "node:module";
+
 const requireRuntime = createRequire(import.meta.url);
 
 function resolveFfmpegPath(): string {
     let p = requireRuntime("ffmpeg-static") as string; // absolute path to ffmpeg
-    // When packaged, make sure we point to the unpacked copy
     if (p.includes("app.asar")) p = p.replace("app.asar", "app.asar.unpacked");
     return p;
+}
+
+async function toSafePath(srcWavPath: string, videoId: string) {
+    const safeDir = path.join(os.tmpdir(), "vnotes-whisper"); // no spaces
+    await ensureDir(safeDir);
+    const safeWav = path.join(safeDir, `${videoId}.wav`);
+    await fsp.copyFile(srcWavPath, safeWav);
+    return safeWav;
 }
 
 async function writeYoutubeTranscript(
@@ -96,31 +104,34 @@ async function getTextTranscript(videoId: string) {
     return notesItemContent;
 }
 
+
+
 async function extractAudio(videoPath: string, videoId: string) {
+    const startTime = Date.now();
+
     const tempDir = path.join(PATHS.USER_DATA_BASE + "/temp");
     await ensureDir(tempDir);
-    const tempPath = path.join(tempDir, `${videoId}.mp3`);
+    const tempPath = path.join(tempDir, `${videoId}.wav`);
     const ffmpegPath = resolveFfmpegPath();
 
     return new Promise((resolve) => {
         const args = [
-            "-y",
-            "-i",
-            videoPath,
-            "-vn",
-            "-ac",
-            "1",
-            "-ar",
-            "16000",
-            "-c:a",
-            "libmp3lame",
-            "-b:a",
-            "48k",
-            tempPath,
+        "-y",
+        "-i", videoPath,
+        "-vn", "-sn", "-dn",
+        "-ac", "1",
+        "-ar", "16000",
+        "-b:a", "64k",
+         "-c:a", "pcm_s16le", 
+        tempPath // e.g. "temp/output.mp3"
         ];
 
         const proc = spawn(ffmpegPath as string, args, { stdio: "inherit" });
         proc.on("close", (code) => {
+            const endTime = Date.now();
+            console.log(
+                `extractAudio | time taken in ms:${endTime - startTime}`
+            );
             if (code === 0) {
                 // successful
                 resolve(tempPath);
@@ -131,28 +142,54 @@ async function extractAudio(videoPath: string, videoId: string) {
     });
 }
 
-async function writeTranscriptFallback(videoId: string, openAIKey: string) {
+// can remove the openAI API key
+async function writeTranscriptFallback(videoId: string) {
     let audioPath: string | null = null;
+    const startWriteTime = Date.now();
     try {
-        let openaiClient = new OpenAI({ apiKey: openAIKey });
-
         const videoFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
-        // const fileStream = fs.createReadStream(videoFilePath);
-
-        // file size limit is 25MB
         audioPath = (await extractAudio(videoFilePath, videoId)) as string;
-        const fileStream = fs.createReadStream(audioPath);
 
-        const { text } = await openaiClient.audio.transcriptions.create({
-            file: fileStream,
-            model: "whisper-1",
+        console.log("writeTranscriptFallback | audioPath", audioPath);
+        // use the node whisper
+
+        const whisperStartTime = Date.now();
+        let resultantTranscript = "";
+        // const fileStream = fs.createReadStream(audioPath);
+        const options = {
+            modelName: "base.en",
+            whisperOptions: {
+                // gen_file_vtt: true,
+                gen_file_txt: false,
+            },
+        };
+        console.log("options", options);
+        const safePath = await toSafePath(audioPath, videoId);
+        console.log("writeTranscriptFallback | safePath", safePath);
+        const resultantTranscriptLines = await whisper(safePath, options);
+        console.log("writeTranscriptFallback | resultantTranscriptLines", resultantTranscriptLines);
+        if (!resultantTranscriptLines) {
+            throw Error("Failed to create transcript");
+        }
+        resultantTranscriptLines.forEach((transcriptLine: any) => {
+            const { speech } = transcriptLine;
+            resultantTranscript += speech + " ";
         });
-        console.log("writeTranscriptFallback | transcript", text);
-        return text;
+
+        const whisperEndTime = Date.now();
+        console.log(
+            `writeTranscriptFallback | whisper lib | time taken in ms:${whisperEndTime - whisperStartTime}`
+        );
+        // then combine the transcript
+        return resultantTranscript;
     } catch (e) {
         console.log("writeTranscriptFallback | e", e);
         return null;
     } finally {
+        const endWriteTime = Date.now();
+        console.log(
+            `writeTranscriptFallback | whole process |time taken in ms:${endWriteTime - startWriteTime}`
+        );
         if (audioPath) {
             try {
                 await fsp.unlink(audioPath);
@@ -169,7 +206,6 @@ async function writeTranscriptFallback(videoId: string, openAIKey: string) {
 
 async function writeFallbackTranscript(videoId: string, transcript: string) {
     try {
-        let transcriptText = "";
         await ensureDir(PATHS.TRANSCRIPTS_DIR);
         await ensureDir(PATHS.TIMESTAMPED_TRANSCRIPTS_DIR);
 
