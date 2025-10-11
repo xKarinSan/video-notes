@@ -1,4 +1,6 @@
 import fsp from "node:fs/promises";
+import pLimit from "p-limit";
+
 import fs from "node:fs";
 import * as os from "os";
 import path from "node:path";
@@ -116,14 +118,21 @@ async function extractAudio(videoPath: string, videoId: string) {
 
     return new Promise((resolve) => {
         const args = [
-        "-y",
-        "-i", videoPath,
-        "-vn", "-sn", "-dn",
-        "-ac", "1",
-        "-ar", "16000",
-        "-b:a", "64k",
-         "-c:a", "pcm_s16le", 
-        tempPath // e.g. "temp/output.mp3"
+            "-y",
+            "-i",
+            videoPath,
+            "-map",
+            "0:a:0",
+            "-vn",
+            "-sn",
+            "-dn",
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            "-c:a",
+            "pcm_s16le",
+            tempPath,
         ];
 
         const proc = spawn(ffmpegPath as string, args, { stdio: "inherit" });
@@ -157,17 +166,27 @@ async function writeTranscriptFallback(videoId: string) {
         let resultantTranscript = "";
         // const fileStream = fs.createReadStream(audioPath);
         const options = {
-            modelName: "base.en",
+            modelName: "tiny.en",
             whisperOptions: {
-                // gen_file_vtt: true,
+                language: "en",
+                translate: false,
                 gen_file_txt: false,
+                word_timestamps: false,
+                timestamp_size: 0,
+            },
+            shellOptions: {
+                silent: false,
+                async: true,
             },
         };
         console.log("options", options);
         const safePath = await toSafePath(audioPath, videoId);
         console.log("writeTranscriptFallback | safePath", safePath);
         const resultantTranscriptLines = await whisper(safePath, options);
-        console.log("writeTranscriptFallback | resultantTranscriptLines", resultantTranscriptLines);
+        console.log(
+            "writeTranscriptFallback | resultantTranscriptLines",
+            resultantTranscriptLines
+        );
         if (!resultantTranscriptLines) {
             throw Error("Failed to create transcript");
         }
