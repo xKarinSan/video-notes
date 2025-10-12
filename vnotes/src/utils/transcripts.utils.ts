@@ -7,9 +7,10 @@ import path from "node:path";
 import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
 import { TranscriptResponse } from "youtube-transcript-plus/dist/types";
-import { whisper } from "whisper-node";
+import whisper from "./whisper.utils";
 import { spawn } from "child_process";
 import { createRequire } from "node:module";
+import { decode } from "node-wav";
 
 const requireRuntime = createRequire(import.meta.url);
 
@@ -20,7 +21,7 @@ function resolveFfmpegPath(): string {
 }
 
 async function toSafePath(srcWavPath: string, videoId: string) {
-    const safeDir = path.join(os.tmpdir(), "vnotes-whisper"); // no spaces
+    const safeDir = path.join(os.tmpdir(), "vnotes-whisper");
     await ensureDir(safeDir);
     const safeWav = path.join(safeDir, `${videoId}.wav`);
     await fsp.copyFile(srcWavPath, safeWav);
@@ -106,8 +107,6 @@ async function getTextTranscript(videoId: string) {
     return notesItemContent;
 }
 
-
-
 async function extractAudio(videoPath: string, videoId: string) {
     const startTime = Date.now();
 
@@ -151,56 +150,135 @@ async function extractAudio(videoPath: string, videoId: string) {
     });
 }
 
-// can remove the openAI API key
+function pickConcurrency(chunkSec: number, nThreadsPerJob = 4) {
+    // no of cpus in the user's device
+    const cores = os.cpus().length;
+    console.log("pickConcurrency | cores", cores);
+    const maxByThreads = Math.max(
+        1,
+        Math.floor((0.7 * cores) / nThreadsPerJob)
+    );
+    const maxByWall = Math.max(1, Math.floor(300 / Math.max(1, chunkSec)));
+
+    return maxByThreads;
+}
+
+async function splitAudioToWavChunks(videoPath: string, seconds = 60) {
+    const ffmpegPath = resolveFfmpegPath();
+    const outDir = path.join(os.tmpdir(), "vnotes-whisper");
+    await ensureDir(outDir);
+    await fsp.mkdir(outDir, { recursive: true });
+    const wavPattern = path.join(outDir, "audio_%03d.wav");
+
+    const args = [
+        "-y",
+        "-i",
+        videoPath,
+        "-map",
+        "0:a:0",
+        "-vn",
+        "-sn",
+        "-dn",
+        "-f",
+        "segment",
+        "-segment_time",
+        String(seconds),
+        "-reset_timestamps",
+        "1",
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        "-c:a",
+        "pcm_s16le",
+        wavPattern,
+    ];
+
+    return new Promise<string[]>(async (resolve) => {
+        const proc = spawn(ffmpegPath as string, args, { stdio: "inherit" });
+        proc.on("close", async (code) => {
+            if (code !== 0) return resolve([]);
+            const files = (await fsp.readdir(outDir))
+                .filter((f) => /^audio_\d{3}\.wav$/.test(f))
+                .sort() // sorts in order
+                .map((f) => path.join(outDir, f));
+
+            resolve(files);
+        });
+    });
+}
+
+async function transcribeChunk(path: string) {
+    let resultantChunkTranscript = "";
+
+    const { channelData } = decode(fs.readFileSync(path));
+    const chunkTranscriptionResult = await whisper.transcribe(channelData[0]);
+    // console.log(await whisper.getSystemInfo());
+
+    const { result } = chunkTranscriptionResult;
+
+    return result;
+}
+
+async function transcribeInParallel(chunkPaths: string[], chunkSize: number) {
+    const concurrencyCount = pickConcurrency(chunkSize);
+    const limit = pLimit(concurrencyCount);
+    const tasks = chunkPaths.map((chunkPath, idx) =>
+        limit(async () => {
+            const text = await transcribeChunk(chunkPath);
+            return { index: idx, content: text };
+        })
+    );
+    const out = await Promise.all(tasks);
+    out.sort((a, b) => a.index - b.index);
+    let resultantTranscript = "";
+    out.forEach((result) => {
+        resultantTranscript += result.content + " ";
+    });
+    return resultantTranscript;
+}
+
 async function writeTranscriptFallback(videoId: string) {
     let audioPath: string | null = null;
     const startWriteTime = Date.now();
     try {
+        let resultantTranscript = "";
         const videoFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
-        audioPath = (await extractAudio(videoFilePath, videoId)) as string;
-
-        console.log("writeTranscriptFallback | audioPath", audioPath);
-        // use the node whisper
+        const audioPath = (await extractAudio(
+            videoFilePath,
+            videoId
+        )) as string;
+        const safePath = await toSafePath(audioPath, videoId);
 
         const whisperStartTime = Date.now();
-        let resultantTranscript = "";
-        // const fileStream = fs.createReadStream(audioPath);
-        const options = {
-            modelName: "tiny.en",
-            whisperOptions: {
-                language: "en",
-                translate: false,
-                gen_file_txt: false,
-                word_timestamps: false,
-                timestamp_size: 0,
-            },
-            shellOptions: {
-                silent: false,
-                async: true,
-            },
-        };
-        console.log("options", options);
-        const safePath = await toSafePath(audioPath, videoId);
-        console.log("writeTranscriptFallback | safePath", safePath);
-        const resultantTranscriptLines = await whisper(safePath, options);
-        console.log(
-            "writeTranscriptFallback | resultantTranscriptLines",
-            resultantTranscriptLines
-        );
-        if (!resultantTranscriptLines) {
-            throw Error("Failed to create transcript");
-        }
-        resultantTranscriptLines.forEach((transcriptLine: any) => {
-            const { speech } = transcriptLine;
-            resultantTranscript += speech + " ";
+        const { channelData } = decode(fs.readFileSync(safePath));
+        const transcriptResults = await whisper.transcribe(channelData[0],{
+            speed_up: true,
+            
+        });
+        const finalTranscript = await new Promise((resolve, reject) => {
+            try {
+                transcriptResults.on("transcribed", (result) => {
+                    console.log("Transcribed", result.text);
+                    resultantTranscript += result.text + " ";
+                });
+
+                transcriptResults.on("finish", () => {
+                    console.log("writeTranscriptFallback | finished!");
+                    const whisperEndTime = Date.now();
+                    console.log(
+                        `writeTranscriptFallback | whisper lib | time taken in ms: ${
+                            whisperEndTime - whisperStartTime
+                        }`
+                    );
+                    resolve(resultantTranscript);
+                });
+            } catch (e) {
+                reject("Error in transcription");
+            }
         });
 
-        const whisperEndTime = Date.now();
-        console.log(
-            `writeTranscriptFallback | whisper lib | time taken in ms:${whisperEndTime - whisperStartTime}`
-        );
-        // then combine the transcript
-        return resultantTranscript;
+        return finalTranscript;
     } catch (e) {
         console.log("writeTranscriptFallback | e", e);
         return null;

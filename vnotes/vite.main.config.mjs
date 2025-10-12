@@ -6,7 +6,7 @@ export default defineConfig({
     build: {
         sourcemap: true,
         rollupOptions: {
-            external: ["ffmpeg-static", "whisper-node"],
+            external: ["ffmpeg-static", "smart-whisper"],
         },
     },
 });

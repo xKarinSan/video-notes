@@ -17,11 +17,9 @@ function Homepage() {
     // check changes
     const [apiKey, setApiKey] = useState("");
     function apiKeyChange(newApiKey: string) {
-        console.log("Homepage | apiKeyChange ", newApiKey);
         setApiKey(newApiKey);
     }
     useEffect(() => {
-        console.log("Homepage | apiKey ", apiKey);
     }, [apiKey]);
 
     return (
