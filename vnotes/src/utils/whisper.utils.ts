@@ -7,7 +7,7 @@ process.env.GGML_METAL_DEVICE = "0";
 console.log("__dirname", __dirname);
 const modelBase = app.isPackaged
     ? path.join(process.resourcesPath, "whisper-models")
-    : path.resolve(app.getAppPath(), "src/whisper.cpp/models");
+    : path.resolve(app.getAppPath(), "src/whisper-models");
 
 const modelPath = path.join(modelBase, "ggml-tiny.en.bin");
 const whisper = new Whisper(modelPath, { gpu: true });
