@@ -3,22 +3,27 @@ import { ChatOpenAI } from "@langchain/openai";
 import { summariseChunkPrompt, combineSummariesPrompt } from "../../prompts.ts";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 
-const { chunks, openAiKey } = workerData;
+interface SummaryWorkerInput {
+    id: number;
+    chunks: string[];
+}
+interface SummaryWorkerOutput {
+    id: number;
+    success: boolean;
+    finalCombined: string | null;
+}
 
-const perChunkModel = new ChatOpenAI({
+const { openAiKey } = workerData;
+
+const model = new ChatOpenAI({
     model: "gpt-3.5-turbo",
     apiKey: openAiKey,
-});
-const combinedmodel = new ChatOpenAI({
-    model: "gpt-3.5-turbo",
-    apiKey: openAiKey,
-    temperature: 0.2,
 });
 
 const perChunkChain =
-    ChatPromptTemplate.fromTemplate(summariseChunkPrompt).pipe(perChunkModel);
+    ChatPromptTemplate.fromTemplate(summariseChunkPrompt).pipe(model);
 const finalChain = ChatPromptTemplate.fromTemplate(combineSummariesPrompt).pipe(
-    combinedmodel
+    model
 );
 
 async function summariseIndividualChunk(chunk: string) {
@@ -31,14 +36,33 @@ async function summariseIndividualChunk(chunk: string) {
 }
 
 async function summariseAllChunks(chunks: string[]) {
-    return Promise.all(
-        chunks.map((c) => summariseIndividualChunk(c))
-    );
+    return Promise.all(chunks.map((c) => summariseIndividualChunk(c)));
 }
 
-const perChunkSummaries = await summariseAllChunks(chunks);
-const combined = await finalChain.invoke({
-    summaries: perChunkSummaries.join("\n\n"),
+parentPort?.on("message", async (m: SummaryWorkerInput) => {
+    const { id, chunks } = m;
+    let outMsg = {};
+    try {
+        const perChunkSummaries = await summariseAllChunks(chunks);
+        const summary = await finalChain.invoke({
+            summaries: perChunkSummaries.join("\n\n"),
+        });
+        outMsg = {
+            id,
+            success: true,
+            finalCombined: summary.content,
+        };
+    } catch (e) {
+        console.log("summaryWorker | e", e);
+        outMsg = {
+            id,
+            success: false,
+            finalCombined: null,
+        };
+    } finally {
+        console.log("summaryWorker | outMsg", outMsg);
+        parentPort!.postMessage(outMsg as SummaryWorkerOutput);
+    }
 });
 
-parentPort?.postMessage(combined);
+export type { SummaryWorkerOutput };

@@ -1,10 +1,14 @@
-import { ChatOpenAI } from "@langchain/openai";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { combineSummariesPrompt, summariseChunkPrompt } from "../prompts";
 import { Worker } from "worker_threads";
 import path from "node:path";
-import { AIMessageChunk } from "@langchain/core/messages";
+import { SummaryWorkerOutput } from "./workers/summaryWorker";
+
+let worker: Worker | null = null;
+let seq = 1;
+const pending = new Map<
+    number,
+    { resolve: (v: any) => void; reject: (e: any) => void }
+>();
 
 async function splitToChunks(transcript: string) {
     /*
@@ -28,19 +32,34 @@ function splitToParagraphs(text: string): string[] {
         .filter(Boolean);
 }
 
-async function runSummaryWorker(chunks: string[], openAiKey: string) {
-    return new Promise((resolve, reject) => {
-        const worker = new Worker(
-            path.resolve("./src/utils/workers/summaryWorker.ts"),
-            {
-                workerData: {
-                    chunks: chunks,
-                    openAiKey: openAiKey,
-                },
-            }
-        );
-        worker.on("message", resolve);
-        worker.on("error", reject);
+function getSummaryWorker(openAiKey: string) {
+    if (worker) return worker;
+    worker = new Worker(path.resolve("./src/utils/workers/summaryWorker.ts"), {
+        workerData: {
+            openAiKey: openAiKey,
+            id: seq,
+        },
+    });
+    worker.on("message", (msg: any) => {
+        const { id, success, finalCombined } = msg;
+        const p = pending.get(id);
+        if (!p) return;
+        pending.delete(id);
+        success
+            ? p.resolve(finalCombined)
+            : p.reject(new Error("Worker failed"));
+    });
+    return worker;
+}
+
+function callSummaryWorker(
+    openAiKey: string,
+    chunks: string[]
+): Promise<SummaryWorkerOutput> {
+    const id = seq++;
+    return new Promise<SummaryWorkerOutput>((resolve, reject) => {
+        pending.set(id, { resolve, reject });
+        getSummaryWorker(openAiKey).postMessage({ id, chunks });
     });
 }
 
@@ -51,22 +70,26 @@ async function summariseCombinedSummaries(chunks: string[], openAiKey: string) {
     3) combine the summaries from 1 and then summarise again. (take in the OpenAI key from the main process)
     3) return the ultimate summary in a string array. 1 item = 1 paragraph
 */
-    const startTime = Date.now();
-    const combinedResults = (await runSummaryWorker(
-        chunks,
-        openAiKey
-    )) as AIMessageChunk;
-    const endTime = Date.now();
+    try {
+        const startTime = Date.now();
+        const combinedResults = await callSummaryWorker(openAiKey, chunks);
+        const endTime = Date.now();
+        console.log(
+            `summariseCombinedSummaries | time taken in ms:${endTime - startTime}`
+        );
 
-    console.log(
-        `summariseCombinedSummaries | time taken in ms:${endTime - startTime}`
-    );
-    const combinedText =
-        typeof combinedResults.content === "string"
-            ? combinedResults.content
-            : String(combinedResults.content);
+        if (!combinedResults) {
+            throw new Error("Failed to get summary");
+        }
 
-    return splitToParagraphs(combinedText);
+        const combinedText =
+            typeof combinedResults === "string" ? combinedResults : String(combinedResults);
+
+        return splitToParagraphs(combinedText);
+    } catch (e) {
+        console.log("summariseCombinedSummaries | E", e);
+        return null;
+    }
 }
 
 export { splitToChunks, summariseCombinedSummaries };
