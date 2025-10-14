@@ -1,8 +1,10 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-
 import { combineSummariesPrompt, summariseChunkPrompt } from "../prompts";
+import { Worker } from "worker_threads";
+import path from "node:path";
+import { AIMessageChunk } from "@langchain/core/messages";
 
 async function splitToChunks(transcript: string) {
     /*
@@ -17,33 +19,29 @@ async function splitToChunks(transcript: string) {
 
     return splitter.splitText(transcript);
 }
-
-async function summariseIndividualChunk(chunk: string, openAiKey: string) {
-    /*
-    1) OpenAI call to summarise (take in the OpenAI key from the main process)
-    2) return the result. this does NOT have to be in paragraphs
-*/
-    const model = new ChatOpenAI({
-        model: "gpt-3.5-turbo",
-        apiKey: openAiKey,
-    });
-    const prompt = ChatPromptTemplate.fromTemplate(summariseChunkPrompt);
-    const chain = prompt.pipe(model);
-    const msg = await chain.invoke({ chunk });
-    return typeof msg.content === "string" ? msg.content : String(msg.content);
-}
-
-async function summariseAllChunks(chunks: string[], openAiKey: string) {
-    return Promise.all(
-        chunks.map((c) => summariseIndividualChunk(c, openAiKey))
-    );
-}
+// approx worker path "./src/utils/workers/summariseIndividualChunk.ts",
 
 function splitToParagraphs(text: string): string[] {
     return text
         .split(/\r?\n\s*\r?\n+/) // blank-line delimiters
         .map((p) => p.trim())
         .filter(Boolean);
+}
+
+async function runSummaryWorker(chunks: string[], openAiKey: string) {
+    return new Promise((resolve, reject) => {
+        const worker = new Worker(
+            path.resolve("./src/utils/workers/summaryWorker.ts"),
+            {
+                workerData: {
+                    chunks: chunks,
+                    openAiKey: openAiKey,
+                },
+            }
+        );
+        worker.on("message", resolve);
+        worker.on("error", reject);
+    });
 }
 
 async function summariseCombinedSummaries(chunks: string[], openAiKey: string) {
@@ -53,23 +51,20 @@ async function summariseCombinedSummaries(chunks: string[], openAiKey: string) {
     3) combine the summaries from 1 and then summarise again. (take in the OpenAI key from the main process)
     3) return the ultimate summary in a string array. 1 item = 1 paragraph
 */
-    const perChunkSummaries = await summariseAllChunks(chunks, openAiKey);
-    const model = new ChatOpenAI({
-        model: "gpt-3.5-turbo",
-        apiKey: openAiKey,
-        temperature: 0.2,
-    });
+    const startTime = Date.now();
+    const combinedResults = (await runSummaryWorker(
+        chunks,
+        openAiKey
+    )) as AIMessageChunk;
+    const endTime = Date.now();
 
-    const prompt = ChatPromptTemplate.fromTemplate(combineSummariesPrompt);
-    const chain = prompt.pipe(model);
-    const combined = await chain.invoke({
-        summaries: perChunkSummaries.join("\n\n"),
-    });
-
+    console.log(
+        `summariseCombinedSummaries | time taken in ms:${endTime - startTime}`
+    );
     const combinedText =
-        typeof combined.content === "string"
-            ? combined.content
-            : String(combined.content);
+        typeof combinedResults.content === "string"
+            ? combinedResults.content
+            : String(combinedResults.content);
 
     return splitToParagraphs(combinedText);
 }
