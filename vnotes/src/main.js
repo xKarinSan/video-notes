@@ -194,7 +194,7 @@ ipcMain.handle(
 
             // get thumbnails
             const videoThumbnail = await setVideoThumbnail(videoId);
-            const openAIKey = await store.get("settings.open_ai_key");
+            // const openAIKey = await store.get("settings.open_ai_key");
             const transcriptText = await writeTranscriptFallback(videoId);
             const savedTranscript = await writeFallbackTranscript(
                 videoId,
@@ -613,15 +613,15 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
         if (!videoTranscript) {
             return null;
         }
-        let openAIKey = await store.get("settings.open_ai_key");
-        if (!openAIKey) {
-            return null;
-        }
+        // let openAIKey = await store.get("settings.open_ai_key");
+        // if (!openAIKey) {
+        //     return null;
+        // }
         let chunks = await splitToChunks(videoTranscript);
         if (!chunks) {
             return null;
         }
-        let summary = await summariseCombinedSummaries(chunks, openAIKey);
+        let summary = await summariseCombinedSummaries(chunks);
         if (!summary) {
             return null;
         }

@@ -19,46 +19,43 @@ const PER_CHUNK_MIN_NEW_TOKENS = 40;
 
 const FINAL_MAX_NEW_TOKENS = 400; // longer final pass
 const FINAL_MIN_NEW_TOKENS = 150;
+// const MODEL = "Falconsai/text_summarization"
+// const MODEL = "openai/gpt-oss-20b";
+const MODEL = "HuggingFaceTB/SmolLM2-135M-Instruct";
+// const TASK = "summarization"
+const TASK = "text-generation";
 
-const summariser = await pipeline("summarization", "Falconsai/text_summarization");
+const pipe = await pipeline(TASK, MODEL);
 
 async function summariseIndividualChunk(
     chunk: string,
     isFinal: boolean = false
 ) {
-    /*
-    1) OpenAI call to summarise (take in the OpenAI key from the main process)
-    2) return the result. this does NOT have to be in paragraphs
-    */
-    const summarisedChunk = await summariser([chunk], {
-        // Give the model room, esp. for the final pass
-        max_new_tokens: isFinal
-            ? FINAL_MAX_NEW_TOKENS
-            : PER_CHUNK_MAX_NEW_TOKENS,
-        min_new_tokens: isFinal
-            ? FINAL_MIN_NEW_TOKENS
-            : PER_CHUNK_MIN_NEW_TOKENS,
-        // Be explicit about truncation behavior
-        // Optional but often helpful:
-        no_repeat_ngram_size: 3,
-        // temperature / top_p can help detail; keep default if you want determinism
+    console.log("summariseIndividualChunk | chunk", chunk);
+    console.log("summariseIndividualChunk | isFinal", isFinal);
+
+    const messages = [
+        {
+            role: "system",
+            content: isFinal ? combineSummariesPrompt : summariseChunkPrompt,
+        },
+        { role: "user", content: chunk },
+    ];
+    const pipeRes = await pipe(messages, {
+        max_new_tokens: 500,
     });
+    console.log("summariseIndividualChunk | pipeRes", pipeRes);
 
-    if (Array.isArray(summarisedChunk)) {
-        return summarisedChunk
-            .map((r: any) => r.summary_text || r.summary || r.text || String(r))
-            .join("\n");
-    }
+    const generatedRes = pipeRes[0].generated_text;
+    console.log(
+        "summariseIndividualChunk | pipeRes[0]",
+        pipeRes[0].generated_text
+    );
 
-    if (typeof summarisedChunk === "object" && summarisedChunk !== null) {
-        return (
-            summarisedChunk.summary_text ||
-            summarisedChunk.summary ||
-            summarisedChunk.text ||
-            JSON.stringify(summarisedChunk)
-        );
-    }
-    return String(summarisedChunk);
+    const lastMessage = generatedRes[generatedRes.length - 1];
+    console.log("summariseIndividualChunk | lastMessage", lastMessage);
+    const output = lastMessage.content;
+    return String(output);
 }
 
 async function summariseAllChunks(chunks: string[]) {
