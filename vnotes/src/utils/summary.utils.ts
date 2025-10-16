@@ -32,11 +32,10 @@ function splitToParagraphs(text: string): string[] {
         .filter(Boolean);
 }
 
-function getSummaryWorker(openAiKey: string) {
+function getSummaryWorker() {
     if (worker) return worker;
     worker = new Worker(path.resolve("./src/utils/workers/summaryWorker.ts"), {
         workerData: {
-            openAiKey: openAiKey,
             id: seq,
         },
     });
@@ -53,17 +52,16 @@ function getSummaryWorker(openAiKey: string) {
 }
 
 function callSummaryWorker(
-    openAiKey: string,
     chunks: string[]
 ): Promise<SummaryWorkerOutput> {
     const id = seq++;
     return new Promise<SummaryWorkerOutput>((resolve, reject) => {
         pending.set(id, { resolve, reject });
-        getSummaryWorker(openAiKey).postMessage({ id, chunks });
+        getSummaryWorker().postMessage({ id, chunks });
     });
 }
 
-async function summariseCombinedSummaries(chunks: string[], openAiKey: string) {
+async function summariseCombinedSummaries(chunks: string[]) {
     /*
     1) get the openai key
     2) run summariseIndividualChunk in parallel 
@@ -72,7 +70,7 @@ async function summariseCombinedSummaries(chunks: string[], openAiKey: string) {
 */
     try {
         const startTime = Date.now();
-        const combinedResults = await callSummaryWorker(openAiKey, chunks);
+        const combinedResults = await callSummaryWorker(chunks);
         const endTime = Date.now();
         console.log(
             `summariseCombinedSummaries | time taken in ms:${endTime - startTime}`
