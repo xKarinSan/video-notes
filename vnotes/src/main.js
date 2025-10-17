@@ -194,7 +194,7 @@ ipcMain.handle(
 
             // get thumbnails
             const videoThumbnail = await setVideoThumbnail(videoId);
-            // const openAIKey = await store.get("settings.open_ai_key");
+            const openAIKey = await store.get("settings.open_ai_key");
             const transcriptText = await writeTranscriptFallback(videoId);
             const savedTranscript = await writeFallbackTranscript(
                 videoId,
