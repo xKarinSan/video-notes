@@ -121,61 +121,13 @@ async function summariseIndividualChunk(
     }
 }
 
-// async function summariseIndividualChunk(
-//     chunk: string,
-//     isFinal: boolean = false
-// ) {
-//     try {
-//         console.log("summariseIndividualChunk | chunk", chunk);
-//         console.log("summariseIndividualChunk | isFinal", isFinal);
-
-//         const messages = [
-//             {
-//                 role: "system",
-//                 content: isFinal
-//                     ? combineSummariesPrompt
-//                     : summariseChunkPrompt,
-//             },
-//             { role: "user", content: chunk },
-//         ];
-//         const pipeRes = await pipe(messages, {
-//             max_new_tokens: isFinal ? 256 : 500,
-//             do_sample: false,
-//             repetition_penalty: 1.2,
-//             return_full_text: false,
-//         });
-//         console.log(
-//             "summariseIndividualChunk | pipeRes",
-//             util.inspect(pipeRes, {
-//                 depth: null, // or Infinity
-//                 colors: true,
-//                 compact: false,
-//                 maxArrayLength: null, // show full arrays
-//                 maxStringLength: null, // don't truncate long strings
-//             })
-//         );
-
-//         const generatedRes = pipeRes?.[0]?.generated_text;
-//         if (!generatedRes) return "";
-
-//         // Case 1: chat-shaped
-//         if (Array.isArray(generatedRes)) {
-//             const last = generatedRes[generatedRes.length - 1];
-//             return typeof last?.content === "string" ? last.content.trim() : "";
-//         }
-
-//         // Case 2: single string (prompt + completion)
-//         if (typeof generatedRes === "string") return generatedRes.trim();
-
-//         return "";
-//     } catch (e) {
-//         console.log("summariseIndividualChunk | e", e);
-//         return null;
-//     }
-// }
-
 async function summariseAllChunks(chunks: string[]) {
-    return Promise.all(chunks.map((c) => summariseIndividualChunk(c, false)));
+    const results = [];
+    for (const c of chunks) {
+        const s = await summariseIndividualChunk(c, false);
+        results.push(s);
+    }
+    return results;
 }
 
 parentPort?.on("message", async (m: SummaryWorkerInput) => {
@@ -186,11 +138,11 @@ parentPort?.on("message", async (m: SummaryWorkerInput) => {
         console.log(
             "summaryWorker | perChunkSummaries",
             util.inspect(perChunkSummaries, {
-                depth: null, // or Infinity
+                depth: null,
                 colors: true,
                 compact: false,
-                maxArrayLength: null, // show full arrays
-                maxStringLength: null, // don't truncate long strings
+                maxArrayLength: null,
+                maxStringLength: null,
             })
         );
         const combinedSummaries = perChunkSummaries.join("\n\n");
