@@ -7,6 +7,8 @@ import { toast } from "react-toastify";
 import { buildPdf } from "../utils/pdfExport.utils";
 import { NotesHeading } from "../classes/Pdf";
 import { formatTimestamp } from "../utils/timestamp.utils";
+import { summariseCombinedSummaries } from "../web-utils/summary.utils";
+
 import VideoPlayer from "../components/VideoPlayer";
 
 function CurrentNotesPage() {
@@ -241,7 +243,28 @@ function CurrentNotesPage() {
         try {
             if (!currentVideo || !currentVideo.id) return;
             setIsGeneratingSummary(true);
-            const res = await window.notes.generateAISummary(currentVideo.id);
+            const transcriptChunks = await window.notes.getTranscriptChunks(
+                currentVideo.id
+            );
+            let res: any[] = [];
+            // the ai summary logic
+
+            let summaryRes = await summariseCombinedSummaries(transcriptChunks);
+            if (!summaryRes) {
+                return null;
+            }
+            console.log("generateAiSummary | summaryRes", summaryRes);
+            summaryRes.forEach((paragraph) => {
+                res = [
+                    ...res,
+                    {
+                        id: crypto.randomUUID(),
+                        isSnapshot: false,
+                        content: paragraph,
+                        timestamp: -1,
+                    },
+                ];
+            });
             setIsGeneratingSummary(false);
             if (!(res && res.length > 0)) {
                 throw new Error(

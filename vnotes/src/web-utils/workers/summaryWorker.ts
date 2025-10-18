@@ -1,8 +1,20 @@
-import { parentPort } from "worker_threads";
-import { summariseChunkPrompt, combineSummariesPrompt } from "../../prompts.ts";
-import { pipeline } from "@huggingface/transformers";
-import util from "node:util";
+import "onnxruntime-web/webgpu";
+import * as ort from "onnxruntime-web";
 
+import { summariseChunkPrompt, combineSummariesPrompt } from "../../prompts.ts";
+import { env as HFenv } from "@huggingface/transformers";
+
+console.log("[worker] navigator.gpu?", !!navigator?.gpu);
+console.log("[worker] ORT webgpu object exists?", !!ort.env.webgpu);
+
+// Prefer ONNX backend + WebGPU explicitly
+HFenv.backends.onnx.preferredBackend = "webgpu";
+// Optional: reduce WASM thread noise and memory pressure
+HFenv.backends.onnx.wasm.numThreads = 1;
+// Optional: pick fp16 when possible (faster on many GPUs)
+HFenv.backends.onnx.webgpu?.setDefaultDeviceType?.("gpu"); // defensive
+
+import { pipeline } from "@huggingface/transformers"; // 5) create pipeline after prefs
 interface SummaryWorkerInput {
     id: number;
     chunks: string[];
@@ -18,9 +30,10 @@ type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 const MODEL = "HuggingFaceTB/SmolLM2-135M-Instruct";
 const TASK = "text-generation";
 
-const pipe = await pipeline(TASK, MODEL, {
-    device: "cpu",
-});
+// const pipe = await pipeline(TASK, MODEL, {
+//     device: "webgpu",
+//     dtype: "fp16",
+// });
 
 // token safe helpers
 const MAX_INPUT_TOKENS_PER_CHUNK = 768;
@@ -29,8 +42,22 @@ const MAX_INPUT_TOKENS_FINAL = 1024;
 const MAX_NEW_TOKENS_CHUNK = 192;
 const MAX_NEW_TOKENS_FINAL = 256;
 
+// get pipe
+let pipePromise: Promise<any> | null = null;
+async function getPipe() {
+    if (!pipePromise) {
+        console.log("[worker] creating pipeline…");
+        pipePromise = await pipeline(TASK, MODEL, {
+            device: "webgpu",
+            dtype: "fp16",
+        });
+    }
+    return pipePromise;
+}
+
 // truncate tokens
-function truncateByTokens(text: string, maxTokens: number): string {
+async function truncateByTokens(text: string, maxTokens: number): string {
+    const pipe = await getPipe();
     const tok: any = (pipe as any)?.tokenizer;
     if (!tok?.encode) return text.length > 8000 ? text.slice(-8000) : text; // char fallback
     const ids = tok.encode(text, { addSpecialTokens: false });
@@ -38,7 +65,8 @@ function truncateByTokens(text: string, maxTokens: number): string {
     return tok.decode(ids.slice(-maxTokens), { skipSpecialTokens: true });
 }
 
-function applyChatTemplate(messages: ChatMessage[]): string {
+async function applyChatTemplate(messages: ChatMessage[]): string {
+    const pipe = await getPipe();
     const tok: any = (pipe as any)?.tokenizer;
     if (tok?.apply_chat_template) {
         return tok.apply_chat_template(messages, {
@@ -57,7 +85,7 @@ function applyChatTemplate(messages: ChatMessage[]): string {
 }
 
 // chat prompt
-function buildPromptFromMessages(
+async function buildPromptFromMessages(
     messages: ChatMessage[],
     isFinal: boolean
 ): string {
@@ -69,9 +97,11 @@ function buildPromptFromMessages(
             ? { ...m, content: truncateByTokens(m.content, maxTokens) }
             : m
     );
-    return applyChatTemplate(truncated);
+    return await applyChatTemplate(truncated);
 }
 async function generateText(prompt: string, maxNew: number, isFinal: boolean) {
+    console.log("generateText | starting");
+    const pipe = await getPipe();
     const res = await pipe(prompt, {
         max_new_tokens: maxNew,
         do_sample: false,
@@ -90,6 +120,7 @@ async function summariseIndividualChunk(
     isFinal = false
 ): Promise<string> {
     try {
+        console.log("summariseIndividualChunk | starting");
         const messages: ChatMessage[] = [
             {
                 role: "system",
@@ -99,7 +130,7 @@ async function summariseIndividualChunk(
             },
             { role: "user", content: chunk },
         ];
-        const prompt = buildPromptFromMessages(messages, isFinal);
+        const prompt = await buildPromptFromMessages(messages, isFinal);
         // keep new tokens modest for CPU stability
         const out = await generateText(
             prompt,
@@ -108,12 +139,12 @@ async function summariseIndividualChunk(
         );
 
         // Debug print (expanded)
-        console.log(
-            "summariseIndividualChunk | isFinal:",
-            isFinal,
-            "| out.len:",
-            out?.length ?? 0
-        );
+        // console.log(
+        //     "summariseIndividualChunk | isFinal:",
+        //     isFinal,
+        //     "| out.len:",
+        //     out?.length ?? 0
+        // );
         return out ?? "";
     } catch (e: any) {
         console.error("summariseIndividualChunk | ERROR:", e);
@@ -122,6 +153,8 @@ async function summariseIndividualChunk(
 }
 
 async function summariseAllChunks(chunks: string[]) {
+    console.log("summariseAllChunks | starting");
+    console.log("summariseAllChunks | chunks", chunks);
     const results = [];
     for (const c of chunks) {
         const s = await summariseIndividualChunk(c, false);
@@ -130,21 +163,13 @@ async function summariseAllChunks(chunks: string[]) {
     return results;
 }
 
-parentPort?.on("message", async (m: SummaryWorkerInput) => {
-    const { id, chunks } = m;
+self.onmessage = async (m: MessageEvent<SummaryWorkerInput>) => {
+    console.log("summaryWorker | message | received!");
+    const { id, chunks } = m.data;
+    console.log("summaryWorker | id", id);
     let outMsg = {};
     try {
         const perChunkSummaries = await summariseAllChunks(chunks);
-        console.log(
-            "summaryWorker | perChunkSummaries",
-            util.inspect(perChunkSummaries, {
-                depth: null,
-                colors: true,
-                compact: false,
-                maxArrayLength: null,
-                maxStringLength: null,
-            })
-        );
         const combinedSummaries = perChunkSummaries.join("\n\n");
         console.log("summaryWorker | combinedSummaries", combinedSummaries);
         const summary = await summariseIndividualChunk(combinedSummaries, true);
@@ -161,9 +186,21 @@ parentPort?.on("message", async (m: SummaryWorkerInput) => {
             finalCombined: null,
         };
     } finally {
-        console.log("summaryWorker | outMsg", outMsg);
-        parentPort!.postMessage(outMsg as SummaryWorkerOutput);
+        // console.log("summaryWorker | outMsg", outMsg);
+        self!.postMessage(outMsg);
     }
-});
+};
+
+async function benchOnce(msg: string) {
+    console.time(msg);
+    const pipe = await getPipe();
+    const out = await pipe("hello", { max_new_tokens: 8, do_sample: false });
+    console.timeEnd(msg);
+}
+
+// Warm-up + run a few
+await benchOnce("[webgpu] warmup");
+await benchOnce("[webgpu] gen1");
+await benchOnce("[webgpu] gen2");
 
 export type { SummaryWorkerOutput };

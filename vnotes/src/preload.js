@@ -144,8 +144,12 @@ contextBridge.exposeInMainWorld("notes", {
     deleteNotesMetadataById: async (notesId) =>
         await ipcRenderer.invoke("delete-notes-record", notesId),
 
-    generateAISummary: async (videoId) => {
-        return await ipcRenderer.invoke("generate-ai-summary", videoId);
+    getTranscriptChunks: async (videoId) => {
+        const transcriptChunks = await ipcRenderer.invoke(
+            "generate-ai-summary",
+            videoId
+        );
+        return transcriptChunks;
     },
 });
 
