@@ -47,7 +47,6 @@ async function getPipe() {
     return pipePromise;
 }
 
-// chat format to prevent gibberish output
 async function formatChat(messages: ChatMessage[]): Promise<string> {
     const pipe = await getPipe();
     const token: any = (pipe as any)?.tokenizer;
@@ -67,7 +66,37 @@ async function formatChat(messages: ChatMessage[]): Promise<string> {
     return lines.join("\n");
 }
 
-// truncate tokens
+function extractBetweenTags(text: string, tag: string): string {
+    const start = `<${tag}>`;
+    const end = `</${tag}>`;
+
+    const i = text.indexOf(start);
+    const j = text.indexOf(end, i + start.length);
+
+    if (i !== -1 && j !== -1) {
+        const inner = text.slice(i + start.length, j).trim();
+        return stripLeadingQuotes(inner);
+    }
+
+    if (i !== -1) {
+        const inner = text.slice(i + start.length).trim();
+        return stripLeadingQuotes(inner);
+    }
+
+    return stripLeadingQuotes(
+        text
+            .replace(
+                /^(\s*here('|’)?s|\s*this\s*(is|are)|\s*your)\b[^:]*:/i,
+                ""
+            )
+            .trim()
+    );
+}
+
+function stripLeadingQuotes(s: string): string {
+    return s.replace(/^["“”]+/, "").replace(/["“”]+$/, "");
+}
+
 async function truncateByTokens(
     text: string,
     maxTokens: number
@@ -75,13 +104,14 @@ async function truncateByTokens(
     const pipe = await getPipe();
     const token: any = (pipe as any)?.tokenizer;
     if (!token?.encode) return text.length > 8000 ? text.slice(0, 8000) : text;
+
     const ids = token.encode(text, { addSpecialTokens: false });
-    const cut = ids.length <= maxTokens ? ids : ids.slice(0, maxTokens); // head, not tail
+    const cut = ids.length <= maxTokens ? ids : ids.slice(0, maxTokens);
     return token.decode(cut, { skipSpecialTokens: true });
 }
+
 async function generateText(messages: ChatMessage[], maxNew: number) {
     console.log("generateText | starting");
-
     const prompt = await formatChat(messages);
     const pipe = await getPipe();
     const res = await pipe(prompt, {
@@ -90,6 +120,15 @@ async function generateText(messages: ChatMessage[], maxNew: number) {
         temperature: 0,
         repetition_penalty: 1.0,
         return_full_text: false,
+        stop: [
+            "\n\n",
+            "</CHUNK_SUMMARY>",
+            "</FINAL_SUMMARY>",
+            "ASSISTANT:",
+            "<<SYS>>",
+            "```",
+            '"}\n',
+        ],
     });
     const full = res?.[0]?.generated_text ?? "";
     return full;
@@ -114,10 +153,13 @@ async function summariseIndividualChunk(
             },
             { role: "user", content: truncatedChunk },
         ];
-        const res = await generateText(
+        const rawRes = await generateText(
             messages,
             isFinal ? MAX_NEW_TOKENS_FINAL : MAX_NEW_TOKENS_CHUNK
         );
+        const res = isFinal
+            ? extractBetweenTags(rawRes, "FINAL_SUMMARY")
+            : extractBetweenTags(rawRes, "CHUNK_SUMMARY");
         return res ?? "";
     } catch (e: any) {
         console.error("summariseIndividualChunk | ERROR:", e);
@@ -131,7 +173,7 @@ async function summariseAllChunks(chunks: string[]) {
     const results = [];
     for (const c of chunks) {
         const s = await summariseIndividualChunk(c, false);
-        results.push(s);
+        results.push(s.trim());
     }
     return results;
 }
