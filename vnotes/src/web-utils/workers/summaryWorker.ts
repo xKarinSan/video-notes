@@ -7,14 +7,11 @@ import { env as HFenv } from "@huggingface/transformers";
 console.log("[worker] navigator.gpu?", !!navigator?.gpu);
 console.log("[worker] ORT webgpu object exists?", !!ort.env.webgpu);
 
-// Prefer ONNX backend + WebGPU explicitly
 HFenv.backends.onnx.preferredBackend = "webgpu";
-// Optional: reduce WASM thread noise and memory pressure
 HFenv.backends.onnx.wasm.numThreads = 1;
-// Optional: pick fp16 when possible (faster on many GPUs)
-HFenv.backends.onnx.webgpu?.setDefaultDeviceType?.("gpu"); // defensive
+HFenv.backends.onnx.webgpu?.setDefaultDeviceType?.("gpu");
 
-import { pipeline } from "@huggingface/transformers"; // 5) create pipeline after prefs
+import { pipeline, ChatMessage } from "@huggingface/transformers";
 interface SummaryWorkerInput {
     id: number;
     chunks: string[];
@@ -25,15 +22,10 @@ interface SummaryWorkerOutput {
     finalCombined: string | null;
 }
 
-type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+// type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 const MODEL = "HuggingFaceTB/SmolLM2-135M-Instruct";
 const TASK = "text-generation";
-
-// const pipe = await pipeline(TASK, MODEL, {
-//     device: "webgpu",
-//     dtype: "fp16",
-// });
 
 // token safe helpers
 const MAX_INPUT_TOKENS_PER_CHUNK = 768;
@@ -49,70 +41,58 @@ async function getPipe() {
         console.log("[worker] creating pipeline…");
         pipePromise = await pipeline(TASK, MODEL, {
             device: "webgpu",
-            dtype: "fp16",
+            dtype: "fp32",
         });
     }
     return pipePromise;
 }
 
-// truncate tokens
-async function truncateByTokens(text: string, maxTokens: number): string {
+// chat format to prevent gibberish output
+async function formatChat(messages: ChatMessage[]): Promise<string> {
     const pipe = await getPipe();
-    const tok: any = (pipe as any)?.tokenizer;
-    if (!tok?.encode) return text.length > 8000 ? text.slice(-8000) : text; // char fallback
-    const ids = tok.encode(text, { addSpecialTokens: false });
-    if (ids.length <= maxTokens) return text;
-    return tok.decode(ids.slice(-maxTokens), { skipSpecialTokens: true });
-}
-
-async function applyChatTemplate(messages: ChatMessage[]): string {
-    const pipe = await getPipe();
-    const tok: any = (pipe as any)?.tokenizer;
-    if (tok?.apply_chat_template) {
-        return tok.apply_chat_template(messages, {
+    const token: any = (pipe as any)?.tokenizer;
+    if (token?.apply_chat_template) {
+        return token.apply_chat_template(messages, {
+            add_generation_prompt: true,
             tokenize: false,
-            add_generation_prompt: true, // tells the model it's the assistant's turn
         });
     }
-    const lines: string[] = [];
-    for (const m of messages) {
-        if (m.role === "system") lines.push(`### System:\n${m.content}`);
-        else if (m.role === "user") lines.push(`### User:\n${m.content}`);
-        else lines.push(`### Assistant:\n${m.content}`);
-    }
-    lines.push("### Assistant:\n");
-    return lines.join("\n\n");
+    const lines = messages.map((m) => {
+        const role = m.role.toUpperCase();
+        return role === "SYSTEM"
+            ? `<<SYS>>\n${m.content}\n<</SYS>>`
+            : `${role}: ${m.content}`;
+    });
+    lines.push("ASSISTANT:");
+    return lines.join("\n");
 }
 
-// chat prompt
-async function buildPromptFromMessages(
-    messages: ChatMessage[],
-    isFinal: boolean
-): string {
-    const maxTokens = isFinal
-        ? MAX_INPUT_TOKENS_FINAL
-        : MAX_INPUT_TOKENS_PER_CHUNK;
-    const truncated = messages.map((m) =>
-        m.role === "user"
-            ? { ...m, content: truncateByTokens(m.content, maxTokens) }
-            : m
-    );
-    return await applyChatTemplate(truncated);
+// truncate tokens
+async function truncateByTokens(
+    text: string,
+    maxTokens: number
+): Promise<string> {
+    const pipe = await getPipe();
+    const token: any = (pipe as any)?.tokenizer;
+    if (!token?.encode) return text.length > 8000 ? text.slice(0, 8000) : text;
+    const ids = token.encode(text, { addSpecialTokens: false });
+    const cut = ids.length <= maxTokens ? ids : ids.slice(0, maxTokens); // head, not tail
+    return token.decode(cut, { skipSpecialTokens: true });
 }
-async function generateText(prompt: string, maxNew: number, isFinal: boolean) {
+async function generateText(messages: ChatMessage[], maxNew: number) {
     console.log("generateText | starting");
+
+    const prompt = await formatChat(messages);
     const pipe = await getPipe();
     const res = await pipe(prompt, {
         max_new_tokens: maxNew,
         do_sample: false,
         temperature: 0,
-        repetition_penalty: 1.1,
-        return_full_text: !isFinal,
+        repetition_penalty: 1.0,
+        return_full_text: false,
     });
     const full = res?.[0]?.generated_text ?? "";
-    return full.startsWith(prompt)
-        ? full.slice(prompt.length).trim()
-        : full.trim();
+    return full;
 }
 
 async function summariseIndividualChunk(
@@ -120,7 +100,11 @@ async function summariseIndividualChunk(
     isFinal = false
 ): Promise<string> {
     try {
-        console.log("summariseIndividualChunk | starting");
+        const truncatedChunk = await truncateByTokens(
+            chunk,
+            isFinal ? MAX_INPUT_TOKENS_FINAL : MAX_INPUT_TOKENS_PER_CHUNK
+        );
+
         const messages: ChatMessage[] = [
             {
                 role: "system",
@@ -128,24 +112,13 @@ async function summariseIndividualChunk(
                     ? combineSummariesPrompt
                     : summariseChunkPrompt,
             },
-            { role: "user", content: chunk },
+            { role: "user", content: truncatedChunk },
         ];
-        const prompt = await buildPromptFromMessages(messages, isFinal);
-        // keep new tokens modest for CPU stability
-        const out = await generateText(
-            prompt,
-            isFinal ? MAX_NEW_TOKENS_FINAL : MAX_NEW_TOKENS_CHUNK,
-            isFinal
+        const res = await generateText(
+            messages,
+            isFinal ? MAX_NEW_TOKENS_FINAL : MAX_NEW_TOKENS_CHUNK
         );
-
-        // Debug print (expanded)
-        // console.log(
-        //     "summariseIndividualChunk | isFinal:",
-        //     isFinal,
-        //     "| out.len:",
-        //     out?.length ?? 0
-        // );
-        return out ?? "";
+        return res ?? "";
     } catch (e: any) {
         console.error("summariseIndividualChunk | ERROR:", e);
         return "";
@@ -170,13 +143,22 @@ self.onmessage = async (m: MessageEvent<SummaryWorkerInput>) => {
     let outMsg = {};
     try {
         const perChunkSummaries = await summariseAllChunks(chunks);
-        const combinedSummaries = perChunkSummaries.join("\n\n");
-        console.log("summaryWorker | combinedSummaries", combinedSummaries);
-        const summary = await summariseIndividualChunk(combinedSummaries, true);
+        let combinedSummaries = "";
+        perChunkSummaries.forEach((summary: string) => {
+            // const currentAns = chat[chat.length - 1].content;
+            combinedSummaries += summary + "\n\n";
+        });
+        console.log("summaryWorker | perChunkSummaries", combinedSummaries);
+
+        const finalCombined: string = await summariseIndividualChunk(
+            combinedSummaries,
+            true
+        );
+        console.log("summaryWorker | finalCombined", finalCombined);
         outMsg = {
             id,
             success: true,
-            finalCombined: summary,
+            finalCombined,
         };
     } catch (e) {
         console.log("summaryWorker | e", e);

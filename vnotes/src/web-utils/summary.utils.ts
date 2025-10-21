@@ -16,10 +16,12 @@ const pending = new Map<
 let seq = 1;
 
 function splitToParagraphs(text: string): string[] {
-    return text
+    const res = text
         .split(/\r?\n\s*\r?\n+/) // blank-line delimiters
         .map((p) => p.trim())
         .filter(Boolean);
+    console.log("splitToParagraphs | res", res);
+    return res;
 }
 
 function getSummaryWorker() {
@@ -38,8 +40,6 @@ function getSummaryWorker() {
     );
 
     worker.onmessage = (ev: MessageEvent<SummaryWorkerOutput>) => {
-        console.log("getSummaryWorker | message received");
-
         const { id, success, finalCombined } = ev.data;
         const p = pending.get(id);
         if (!p) return;
@@ -51,12 +51,10 @@ function getSummaryWorker() {
 }
 
 function callSummaryWorker(chunks: string[]): Promise<SummaryWorkerOutput> {
-    console.log("callSummaryWorker | calling worker");
     const id = seq++;
     return new Promise<SummaryWorkerOutput>((resolve, reject) => {
         pending.set(id, { resolve, reject });
         getSummaryWorker();
-        console.log("callSummaryWorker | worker", worker);
         worker?.postMessage({ id, chunks });
     });
 }
@@ -71,7 +69,8 @@ async function summariseCombinedSummaries(chunks: string[]) {
     try {
         console.log("summariseCombinedSummaries | starting now");
         const startTime = Date.now();
-        const combinedResults = await callSummaryWorker(chunks);
+        const combinedResults: SummaryWorkerOutput =
+            await callSummaryWorker(chunks);
         console.log(
             "summariseCombinedSummaries | combinedResults",
             combinedResults
