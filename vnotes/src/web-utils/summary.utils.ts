@@ -40,7 +40,7 @@ function getSummaryWorker() {
     );
 
     worker.onmessage = (ev: MessageEvent<SummaryWorkerOutput>) => {
-        const { id, success, finalCombined } = ev.data;
+        const { id, success } = ev.data;
         const p = pending.get(id);
         if (!p) return;
         pending.delete(id);
@@ -52,10 +52,15 @@ function getSummaryWorker() {
 
 function callSummaryWorker(chunks: string[]): Promise<SummaryWorkerOutput> {
     const id = seq++;
+    console.log("callSummaryWorker", callSummaryWorker);
     return new Promise<SummaryWorkerOutput>((resolve, reject) => {
         pending.set(id, { resolve, reject });
-        getSummaryWorker();
-        worker?.postMessage({ id, chunks });
+        let currWorker = getSummaryWorker();
+        console.log("callSummaryWorker | called");
+        console.log("callSummaryWorker | worker ", worker);
+        console.log("callSummaryWorker | msg ", { id, chunks });
+        currWorker.postMessage({ id, chunks });
+        console.log("callSummaryWorker | sent!");
     });
 }
 
@@ -69,6 +74,8 @@ async function summariseCombinedSummaries(chunks: string[]) {
     try {
         console.log("summariseCombinedSummaries | starting now");
         const startTime = Date.now();
+        console.log("summariseCombinedSummaries |  chunks", chunks);
+
         const combinedResults: SummaryWorkerOutput =
             await callSummaryWorker(chunks);
         console.log(
@@ -85,6 +92,7 @@ async function summariseCombinedSummaries(chunks: string[]) {
         }
         // const { finalCombined } = combinedResults;
         return splitToParagraphs(combinedResults?.finalCombined ?? "");
+        // return combinedResults?.finalCombined
     } catch (e) {
         console.log("summariseCombinedSummaries | E", e);
         return null;
