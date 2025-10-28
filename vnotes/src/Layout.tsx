@@ -1,18 +1,48 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ApiKeyModal from "./components/ApiKeyModal";
+
+// import "onnxruntime-web/webgpu";
+import { env as HFenv, pipeline } from "@huggingface/transformers";
+import { SUMMARISATION_MODEL, SUMMARISATION_TASK } from "./const";
+import { toast } from "react-toastify";
+
+HFenv.backends.onnx.preferredBackend = "webgpu";
+HFenv.useBrowserCache = true;
 
 function Layout() {
     const isDev = process.env.NODE_ENV === "development";
     const loc = useLocation();
+    const [modelLoading, setModelLoading] = useState(false);
+
+    async function preloadModel() {
+        try {
+            await pipeline(SUMMARISATION_TASK, SUMMARISATION_MODEL, {
+                device: "webgpu",
+                dtype: "fp32",
+            });
+            console.log("Model cached and ready.");
+            toast.success("Models loaded!");
+        } catch (e) {
+            console.error("preloadModel | e", e);
+            toast.error("Failed to load model");
+        } finally {
+            setModelLoading(false);
+        }
+    }
 
     useEffect(() => {
         const toSave = isDev
             ? loc.pathname + window.location.search + window.location.hash // BrowserRouter
             : window.location.hash || "/"; // HashRouter (persists "#/...")
 
+        // load the model too
         window.settings.savePath(toSave);
     }, [loc]);
+
+    useEffect(() => {
+        preloadModel();
+    }, []);
 
     return (
         <>
@@ -164,6 +194,21 @@ function Layout() {
                             </ApiKeyModal>
                         </li>
                     </ul>
+                </div>
+            </div>
+
+            <input
+                type="checkbox"
+                id="modal-loading"
+                className="modal-toggle"
+                checked={modelLoading}
+            />
+            <div className="modal" role="dialog">
+                <div className="modal-box">
+                    <h3 className="text-lg font-bold">Models loading!</h3>
+                    <p className="py-4">
+                        Pleaase wait for your models to load.
+                    </p>
                 </div>
             </div>
         </>

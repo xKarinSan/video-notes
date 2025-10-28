@@ -1,12 +1,11 @@
 import "onnxruntime-web/webgpu";
 import * as ort from "onnxruntime-web";
 import { env as HFenv } from "@huggingface/transformers";
-import {
-    SUMMARISATION_MODEL,
-    SUMMARISATION_TASK,
-} from "../../const";
+import { SUMMARISATION_MODEL, SUMMARISATION_TASK } from "../../const";
 
 HFenv.backends.onnx.preferredBackend = "webgpu";
+HFenv.useBrowserCache = true;
+
 (ort.env as any).webgpu = (ort.env as any).webgpu || {};
 (ort.env as any).webgpu.powerPreference = "high-performance";
 import { pipeline } from "@huggingface/transformers";
@@ -21,8 +20,6 @@ interface SummaryWorkerOutput {
     finalCombined: string | null;
 }
 
-
-// ---- SINGLE-FLIGHT PIPELINE & TOKENIZER ----
 // get pipe
 let summaryPipe: any = null;
 
@@ -46,7 +43,10 @@ async function makePipes(device: "webgpu" | "cpu" = "webgpu") {
 async function summariseIndividualChunk(chunk: string): Promise<string> {
     try {
         console.log("summariseIndividualChunk | chunk", chunk);
-        const chunkSummary = await summaryPipe(chunk);
+        const chunkSummary = await summaryPipe(chunk, {
+            num_beams: 8,
+            do_sample: false,
+        });
         const summaryContent = chunkSummary?.[0]?.summary_text ?? "";
         console.log(
             "summariseIndividualChunk | summaryContent",
@@ -77,7 +77,7 @@ const limit = <T>(jobs: Array<() => Promise<T>>, n: number) => {
 async function summariseAllChunks(chunks: string[]) {
     console.log("summariseAllChunks | triggered");
     const jobs = chunks.map((c) => () => summariseIndividualChunk(c));
-    return limit(jobs, 2);
+    return limit(jobs, 4);
 }
 
 self.onmessage = async (m: MessageEvent<SummaryWorkerInput>) => {
