@@ -56,6 +56,7 @@ import {
 import {
     splitToChunks,
     summariseCombinedSummaries,
+    summariseVideo,
 } from "./utils/summary.utils";
 import {
     deleteVideoThumbnail,
@@ -606,22 +607,23 @@ ipcMain.handle("set-openai-key", async (_, openAiKey) => {
 ipcMain.handle("generate-ai-summary", async (_, videoId) => {
     try {
         let res = [];
-        let videoTranscript = await getTextTranscript(videoId);
-        if (!videoTranscript) {
-            return null;
-        }
-        let openAIKey = await store.get("settings.open_ai_key");
-        if (!openAIKey) {
-            return null;
-        }
-        let chunks = await splitToChunks(videoTranscript);
-        if (!chunks) {
-            return null;
-        }
-        let summary = await summariseCombinedSummaries(chunks, openAIKey);
-        if (!summary) {
-            return null;
-        }
+        // let videoTranscript = await getTextTranscript(videoId);
+        // if (!videoTranscript) {
+        //     return null;
+        // }
+        // let openAIKey = await store.get("settings.open_ai_key");
+        // if (!openAIKey) {
+        //     return null;
+        // }
+        // let chunks = await splitToChunks(videoTranscript);
+        // if (!chunks) {
+        //     return null;
+        // }
+        // let summary = await summariseCombinedSummaries(chunks, openAIKey);
+        // if (!summary) {
+        //     return null;
+        // }
+        let summary = await summariseVideo(videoId);
         summary.forEach((paragraph) => {
             res = [
                 ...res,

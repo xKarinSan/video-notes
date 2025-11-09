@@ -41,11 +41,13 @@
         "vite": "^5.4.19"
     },
     "dependencies": {
+        "@google/genai": "^1.29.0",
         "@langchain/core": "^0.3.72",
         "@langchain/openai": "^0.6.9",
         "@langchain/textsplitters": "^0.1.0",
         "@radix-ui/themes": "^3.2.1",
         "@tailwindcss/vite": "^4.1.11",
+        "bufferutil": "^4.0.9",
         "electron-squirrel-startup": "^1.0.1",
         "electron-store": "^10.1.0",
         "ffmpeg-static": "^5.2.0",
@@ -61,7 +63,9 @@
         "tailwindcss-typography": "^3.1.0",
         "undici": "^7.16.0",
         "update-electron-app": "^3.1.1",
+        "utf-8-validate": "^6.0.5",
         "uuid": "^11.1.0",
+        "ws": "^8.18.3",
         "youtube-transcript-plus": "^1.1.1",
         "youtubei.js": "^15.1.1"
     }

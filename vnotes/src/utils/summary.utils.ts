@@ -1,8 +1,21 @@
 import { ChatOpenAI } from "@langchain/openai";
+import path from "node:path";
+import { PATHS } from "../../const";
+import {
+    createPartFromUri,
+    createUserContent,
+    GoogleGenAI,
+} from "@google/genai";
+
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
-import { combineSummariesPrompt, summariseChunkPrompt } from "../prompts";
+import {
+    combineSummariesPrompt,
+    summariseChunkPrompt,
+    videoSummaryPrompt,
+} from "../prompts";
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 async function splitToChunks(transcript: string) {
     /*
@@ -73,5 +86,71 @@ async function summariseCombinedSummaries(chunks: string[], openAiKey: string) {
 
     return splitToParagraphs(combinedText);
 }
+const getFileMeta = async (f: any) => {
+    if (ai.files.get) {
+        try {
+            return await ai.files.get(f.name ?? f.uri ?? f);
+        } catch (err) {
+            return null;
+        }
+    }
+    return f;
+};
 
-export { splitToChunks, summariseCombinedSummaries };
+async function waitUntilActive(
+    fileOrName: string,
+    maxAttempts = 30,
+    delayMs = 2000
+) {
+    let file =
+        typeof fileOrName === "string"
+            ? await ai.files.get({ name: fileOrName })
+            : fileOrName;
+
+    for (let i = 0; i < maxAttempts; i++) {
+        console.log("waitUntilActive | file", file);
+        console.log("waitUntilActive | attempt", i);
+        if (file.state === "ACTIVE") return file;
+
+        if (file.state === "FAILED") {
+            const reason =
+                file?.error?.message ||
+                file?.error ||
+                "Unknown processing error";
+            throw new Error(`File processing failed: ${reason}`);
+        }
+
+        await new Promise((r) => setTimeout(r, delayMs));
+
+        // re-fetch updated state
+        file = await ai.files.get({ name: file.name });
+    }
+}
+
+async function summariseVideo(videoId: string) {
+    const start = performance.now();
+    const notesItemFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
+    let file = await ai.files.upload({
+        file: notesItemFilePath,
+        config: { mimeType: "video/mp4" },
+    });
+
+    file = await waitUntilActive(file.name);
+    console.log("File processed!");
+
+    const results = await ai.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: createUserContent([
+            createPartFromUri(file.uri, file.mimeType),
+            videoSummaryPrompt,
+        ]),
+    });
+    const end = performance.now();
+    const duration = end - start;
+    console.log(`Execution time: ${duration} ms`);
+    const combinedText =
+        typeof results.text === "string" ? results.text : String(results.text);
+    return splitToParagraphs(combinedText);
+}
+
+export { splitToChunks, summariseCombinedSummaries, summariseVideo };
