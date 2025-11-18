@@ -277,6 +277,13 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
 
         videoId = randomUUID();
         const info = await innertube.getInfo(youtubeVideoId);
+
+        let testFilePath = "res.json"
+        let testMetadataString = JSON.stringify(info, null, 2);
+        await fsp.writeFile(testFilePath, testMetadataString);
+
+
+
         const { basic_info, primary_info } = info;
         const {
             id: originalVideoId,
@@ -287,6 +294,8 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
             author: opName,
             thumbnail,
         } = basic_info;
+        console.log("basic_info", basic_info);
+        console.log("primary_info", primary_info);
 
         // get the upload date
         const { published } = primary_info;
@@ -294,11 +303,14 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
         let dateUploaded = new Date(uploadDateString).getTime();
 
         console.log("BEFORE download call");
+        console.log("originalVideoId", originalVideoId);
+        console.log("videoId", videoId);
         const isVideoDownloaded = await downloadYoutubeVideoFile(
             innertube,
             originalVideoId,
             videoId
         );
+        console.log("add-youtube-video |isVideoDownloaded ", isVideoDownloaded);
 
         console.log("AFTER download call");
         let savedTranscript = false;

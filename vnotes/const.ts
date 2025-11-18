@@ -5,6 +5,7 @@ export const PATHS = {
     USER_DATA_BASE: path.resolve(app.getPath("userData"), "user_data"),
     METADATA_DIR: "",
     VIDEOS_DIR: "",
+    COMPRESSED_VIDEOS_DIR: "",
     THUMBNAILS_DIR: "",
     NOTES_DIR: "",
     NOTES_ITEM_DIR: "",
@@ -15,6 +16,11 @@ export const PATHS = {
 
 PATHS.METADATA_DIR = path.join(PATHS.USER_DATA_BASE, "metadata");
 PATHS.VIDEOS_DIR = path.join(PATHS.USER_DATA_BASE, "videos");
+PATHS.COMPRESSED_VIDEOS_DIR = path.join(
+    PATHS.USER_DATA_BASE,
+    "compressed_videos"
+);
+
 PATHS.THUMBNAILS_DIR = path.join(PATHS.USER_DATA_BASE, "thumbnails");
 PATHS.NOTES_DIR = path.join(PATHS.USER_DATA_BASE, "notes");
 PATHS.NOTES_ITEM_DIR = path.join(PATHS.USER_DATA_BASE, "notes_items");

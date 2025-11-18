@@ -15,6 +15,8 @@ import {
     summariseChunkPrompt,
     videoSummaryPrompt,
 } from "../prompts";
+import { execFile } from "node:child_process";
+import { ensureDir, fileExists } from "./files.utils";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 async function splitToChunks(transcript: string) {
@@ -127,17 +129,75 @@ async function waitUntilActive(
     }
 }
 
+function runFfmpeg(ffmpegPath: string, args: string[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+        execFile(ffmpegPath, args, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`ffmpeg stderr: ${stderr}`);
+                reject(error);
+                return;
+            }
+            // Optional: log success output
+            // console.log(`ffmpeg stdout: ${stdout}`);
+            resolve();
+        });
+    });
+}
+
 async function summariseVideo(videoId: string) {
     const start = performance.now();
-    const notesItemFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
+
+    await ensureDir(PATHS.COMPRESSED_VIDEOS_DIR);
+    const tempFileName = `${videoId}.mp4`;
+    const tempOutputPath = path.join(PATHS.COMPRESSED_VIDEOS_DIR, tempFileName);
+
+    const isCompressed = await fileExists(tempOutputPath);
+    if (!isCompressed) {
+        console.log("Compressing ....");
+        const compressionStart = performance.now();
+        const notesItemFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
+        // TO DO: preprocess the video to 1FPS
+        const ffmpeg_cmd = "ffmpeg"; // Ensure 'ffmpeg' is in your system's PATH, or provide the full path.
+
+        const cmd = [
+            "-y",
+            "-i",
+            notesItemFilePath,
+            "-vf",
+            "scale=640:-2", // downscale resolution
+            "-r",
+            "1", // 1 FPS
+            "-vcodec",
+            "libx264",
+            "-crf",
+            "30", // more compression
+            "-preset",
+            "veryfast",
+            "-acodec",
+            "aac",
+            "-b:a",
+            "64k",
+            tempOutputPath,
+        ];
+        await runFfmpeg(ffmpeg_cmd, cmd);
+        const compressionEnd = performance.now();
+        console.log(
+            `Execution time (compression): ${compressionEnd - compressionStart} ms`
+        );
+    }
+    console.log("Uploading to Google's file API ....");
+    const uploadStart = performance.now();
     let file = await ai.files.upload({
-        file: notesItemFilePath,
+        file: tempOutputPath,
         config: { mimeType: "video/mp4" },
     });
-
     file = await waitUntilActive(file.name);
+    const uploadEnd = performance.now();
+    console.log(`Execution time (upload): ${uploadEnd - uploadStart} ms`);
     console.log("File processed!");
 
+    console.log("Summarising video ....");
+    const summaryStart = performance.now();
     const results = await ai.models.generateContent({
         model: "gemini-2.5-flash-lite",
         contents: createUserContent([
@@ -145,6 +205,9 @@ async function summariseVideo(videoId: string) {
             videoSummaryPrompt,
         ]),
     });
+    const summaryEnd = performance.now();
+    console.log(`Execution time (summary): ${summaryEnd - summaryStart} ms`);
+
     const end = performance.now();
     const duration = end - start;
     console.log(`Execution time: ${duration} ms`);
