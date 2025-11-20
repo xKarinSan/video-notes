@@ -17,7 +17,13 @@ import {
 } from "../prompts";
 import { execFile } from "node:child_process";
 import { ensureDir, fileExists } from "./files.utils";
+import Store from "electron-store";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+interface FileAPIMetadata {
+    fileName: string;
+    expirationTime: string; // date timestamp
+}
 
 async function splitToChunks(transcript: string) {
     /*
@@ -88,16 +94,16 @@ async function summariseCombinedSummaries(chunks: string[], openAiKey: string) {
 
     return splitToParagraphs(combinedText);
 }
-const getFileMeta = async (f: any) => {
-    if (ai.files.get) {
-        try {
-            return await ai.files.get(f.name ?? f.uri ?? f);
-        } catch (err) {
-            return null;
-        }
-    }
-    return f;
-};
+// const getFileMeta = async (f: any) => {
+//     if (ai.files.get) {
+//         try {
+//             return await ai.files.get(f.name ?? f.uri ?? f);
+//         } catch (err) {
+//             return null;
+//         }
+//     }
+//     return f;
+// };
 
 async function waitUntilActive(
     fileOrName: string,
@@ -145,6 +151,7 @@ function runFfmpeg(ffmpegPath: string, args: string[]): Promise<void> {
 }
 
 async function summariseVideo(videoId: string) {
+    const store = new Store();
     const start = performance.now();
 
     await ensureDir(PATHS.COMPRESSED_VIDEOS_DIR);
@@ -185,16 +192,42 @@ async function summariseVideo(videoId: string) {
             `Execution time (compression): ${compressionEnd - compressionStart} ms`
         );
     }
-    console.log("Uploading to Google's file API ....");
-    const uploadStart = performance.now();
-    let file = await ai.files.upload({
-        file: tempOutputPath,
-        config: { mimeType: "video/mp4" },
-    });
-    file = await waitUntilActive(file.name);
-    const uploadEnd = performance.now();
-    console.log(`Execution time (upload): ${uploadEnd - uploadStart} ms`);
-    console.log("File processed!");
+    let file = null;
+    let fileInStore = true;
+    let cached: FileAPIMetadata | null = store.get(
+        "geminiFile." + videoId
+    ) as FileAPIMetadata;
+    if (cached == null) {
+        fileInStore = false;
+    } else {
+        // retrieve from the API
+        const { fileName, expirationTime } = cached;
+        const expirationDate = new Date(expirationTime);
+        const currDate = new Date();
+
+        if (currDate <= expirationDate) {
+            file = await ai.files.get({ name: fileName });
+        } else {
+            fileInStore = false;
+        }
+    }
+
+    if (!fileInStore) {
+        console.log("Uploading to Google's file API ....");
+        const uploadStart = performance.now();
+        file = await ai.files.upload({
+            file: tempOutputPath,
+            config: { mimeType: "video/mp4" },
+        });
+        file = await waitUntilActive(file?.name || "");
+        store.set("geminiFile." + videoId, {
+            fileName: file?.name || "",
+            expirationTime: file?.expirationTime,
+        });
+        const uploadEnd = performance.now();
+        console.log(`Execution time (upload): ${uploadEnd - uploadStart} ms`);
+        console.log("File processed!");
+    }
 
     console.log("Summarising video ....");
     const summaryStart = performance.now();
