@@ -12,6 +12,7 @@ export const PATHS = {
     SNAPSHOTS_DIR: "",
     TRANSCRIPTS_DIR: "",
     TIMESTAMPED_TRANSCRIPTS_DIR: "",
+    LOGS_DIR: "",
 };
 
 PATHS.METADATA_DIR = path.join(PATHS.USER_DATA_BASE, "metadata");
@@ -30,6 +31,8 @@ PATHS.TIMESTAMPED_TRANSCRIPTS_DIR = path.join(
     PATHS.USER_DATA_BASE,
     "timestamped_transcripts"
 );
+
+PATHS.LOGS_DIR = path.join(PATHS.USER_DATA_BASE, "logs");
 
 console.log("VIDEOS_DIR:", PATHS.VIDEOS_DIR);
 console.log("THUMBNAILS_DIR:", PATHS.THUMBNAILS_DIR);

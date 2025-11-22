@@ -3,6 +3,7 @@ import path from "node:path";
 import { PATHS } from "../../const";
 import fsp from "node:fs/promises";
 import { ensureDir, fileExists } from "./files.utils";
+import { logErrorToFile } from "./logging.utils";
 
 async function writeNotesItem(notesId: string, notes: NotesItem[]) {
     try {
@@ -20,6 +21,7 @@ async function writeNotesItem(notesId: string, notes: NotesItem[]) {
         return true;
     } catch (e) {
         console.error("writeNotesItem | e", e);
+        logErrorToFile(e as Error, "notesItems.utils.ts", "writeNotesItem");
         return false;
     }
 }
@@ -42,6 +44,7 @@ async function readNotesItem(notesId: string) {
         return JSON.parse(notesItemContent);
     } catch (e) {
         console.error("readNotesItem | e", e);
+        logErrorToFile(e as Error, "notesItems.utils.ts", "readNotesItem");
         return null;
     }
 }
@@ -66,6 +69,11 @@ async function deleteNotesFromList(notesIdList: string[]) {
         return true;
     } catch (e) {
         console.log("deleteNotesMetadata | e", e);
+        logErrorToFile(
+            e as Error,
+            "notesItems.utils.ts",
+            "deleteNotesMetadata"
+        );
         return false;
     }
 }
@@ -80,6 +88,11 @@ async function deleteNotesItemById(notesId) {
         return true;
     } catch (e) {
         console.error("deleteNotesItem | e", e);
+        logErrorToFile(
+            e as Error,
+            "notesItems.utils.ts",
+            "deleteNotesItemById"
+        );
         return false;
     }
 }
@@ -123,6 +136,7 @@ async function syncSnapshots(notesId, notesDetails, bufferDict) {
         return true;
     } catch (e) {
         console.error("syncSnapshots | e", e);
+        logErrorToFile(e as Error, "notesItems.utils.ts", "syncSnapshots");
         return false;
     }
 }
@@ -156,6 +170,11 @@ async function getSnapshotBufferMap(notesId) {
         return Object.fromEntries(entries); // { [snapshotId]: Buffer }
     } catch (e) {
         console.error("getSnapshotBufferMap | e", e);
+        logErrorToFile(
+            e as Error,
+            "notesItems.utils.ts",
+            "getSnapshotBufferMap"
+        );
         return null;
     }
 }
@@ -171,7 +190,12 @@ async function deleteSnapshotsByNotesId(notesId) {
         }
         return true;
     } catch (e) {
-        console.log("e", e);
+        console.log("e | deleteSnapshotsByNotesId", e);
+        logErrorToFile(
+            e as Error,
+            "notesItems.utils.ts",
+            "deleteSnapshotsByNotesId"
+        );
         return false;
     }
 }
@@ -192,6 +216,11 @@ async function deleteSnapshotFromNote(notesIdList) {
         return true;
     } catch (e) {
         console.log("deleteSnapshotFromNote | e", e);
+        logErrorToFile(
+            e as Error,
+            "notesItems.utils.ts",
+            "deleteSnapshotFromNote"
+        );
         return false;
     }
 }

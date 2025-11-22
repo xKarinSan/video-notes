@@ -6,8 +6,9 @@ import { promises as pfs } from "fs";
 import { pipeline } from "node:stream/promises";
 import { PATHS } from "../../const";
 import { ensureDir, fileExists, getVideoMetadataById } from "./files.utils";
+import { logErrorToFile } from "./logging.utils";
 
-function getYoutubeVideoId(url) {
+function getYoutubeVideoId(url: string) {
     try {
         const parsed = new URL(url);
         // Match main YouTube domains
@@ -18,7 +19,7 @@ function getYoutubeVideoId(url) {
             if (!parsed.pathname === "/watch" && parsed.searchParams.has("v")) {
                 return null;
             }
-            return parsed.searchParams.get("v").replace(/^\//, "");
+            return parsed.searchParams?.get("v").replace(/^\//, "");
         }
 
         // Match youtu.be short links
@@ -32,6 +33,7 @@ function getYoutubeVideoId(url) {
         return null;
     } catch (e) {
         console.log("e", e);
+        logErrorToFile(e as Error, "youtubeVideoUtils.ts", "getYoutubeVideoId");
         return null;
     }
 }
@@ -45,7 +47,13 @@ async function downloadVideoMetadata(videoMetadata, videoId) {
         let json_string = JSON.stringify(videoMetadata, null, 2);
         await fsp.writeFile(videoMetadataFilePath, json_string);
         return true;
-    } catch {
+    } catch (e) {
+        logErrorToFile(
+            e as Error,
+            "youtubeVideoUtils.ts",
+            "downloadVideoMetadata"
+        );
+
         return false;
     }
 }
@@ -67,6 +75,11 @@ async function downloadYoutubeVideoFile(innertube, youtubeVideoId, videoId) {
         return true;
     } catch (err) {
         console.log("downloadYoutubeVideoFile | err", err);
+        logErrorToFile(
+            err as Error,
+            "youtubeVideoUtils.ts",
+            "downloadYoutubeVideoFile"
+        );
         return false;
     }
 }
@@ -83,6 +96,11 @@ async function downloadUploadedVideoFile(videoBytes, videoId) {
         return true;
     } catch (e) {
         console.log("downloadUploadedVideoFile error", e);
+        logErrorToFile(
+            e as Error,
+            "youtubeVideoUtils.ts",
+            "downloadUploadedVideoFile"
+        );
         return false;
     }
 }
@@ -97,7 +115,12 @@ async function deleteVideoMetadata(videoId) {
             await fsp.unlink(videoMetadataFilePath);
         }
         return true;
-    } catch {
+    } catch (e) {
+        logErrorToFile(
+            e as Error,
+            "youtubeVideoUtils.ts",
+            "deleteVideoMetadata"
+        );
         return false;
     }
 }
@@ -110,6 +133,7 @@ async function deleteVideoFile(videoId) {
         }
         return true;
     } catch (e) {
+        logErrorToFile(e as Error, "youtubeVideoUtils.ts", "deleteVideoFile");
         return false;
     }
 }
@@ -129,6 +153,7 @@ async function deleteVideoRecord(videoId) {
         return true;
     } catch (e) {
         console.error("deleteVideoRecord error:", e);
+        logErrorToFile(e as Error, "youtubeVideoUtils.ts", "deleteVideoRecord");
         return false;
     }
 }

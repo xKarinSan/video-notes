@@ -5,12 +5,12 @@ import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
 import { TranscriptResponse } from "youtube-transcript-plus/dist/types";
 import OpenAI from "openai";
-// import ffmpegPath from "ffmpeg-static";
 import { spawn } from "child_process";
 import { createRequire } from "node:module";
+import { logErrorToFile } from "./logging.utils";
 const requireRuntime = createRequire(import.meta.url);
 
-function resolveFfmpegPath(): string {
+export function resolveFfmpegPath(): string {
     let p = requireRuntime("ffmpeg-static") as string; // absolute path to ffmpeg
     // When packaged, make sure we point to the unpacked copy
     if (p.includes("app.asar")) p = p.replace("app.asar", "app.asar.unpacked");
@@ -42,6 +42,11 @@ async function writeYoutubeTranscript(
         await fsp.writeFile(transcriptTextFilePath, transcriptText);
         return true;
     } catch (e) {
+        logErrorToFile(
+            e as Error,
+            "transcripts.utils.ts",
+            "writeYoutubeTranscript"
+        );
         console.error("writeYoutubeTranscript | e", e);
         return false;
     }
@@ -71,6 +76,8 @@ async function deleteTranscript(videoId: string) {
         }
         return true;
     } catch (e) {
+        logErrorToFile(e as Error, "transcripts.utils.ts", "deleteTranscript");
+
         console.error("deleteTranscript | e", e);
         return false;
     }
@@ -150,6 +157,11 @@ async function writeTranscriptFallback(videoId: string, openAIKey: string) {
         console.log("writeTranscriptFallback | transcript", text);
         return text;
     } catch (e) {
+        logErrorToFile(
+            e as Error,
+            "transcripts.utils.ts",
+            "writeTranscriptFallback"
+        );
         console.log("writeTranscriptFallback | e", e);
         return null;
     } finally {
@@ -162,6 +174,11 @@ async function writeTranscriptFallback(videoId: string, openAIKey: string) {
                     "writeTranscriptFallback | cleanup failed",
                     cleanupErr
                 );
+                logErrorToFile(
+                    cleanupErr as Error,
+                    "transcripts.utils.ts",
+                    "writeTranscriptFallback"
+                );
             }
         }
     }
@@ -169,7 +186,6 @@ async function writeTranscriptFallback(videoId: string, openAIKey: string) {
 
 async function writeFallbackTranscript(videoId: string, transcript: string) {
     try {
-        let transcriptText = "";
         await ensureDir(PATHS.TRANSCRIPTS_DIR);
         await ensureDir(PATHS.TIMESTAMPED_TRANSCRIPTS_DIR);
 
@@ -181,6 +197,11 @@ async function writeFallbackTranscript(videoId: string, transcript: string) {
         return true;
     } catch (e) {
         console.error("writeFallbackTranscript | e", e);
+        logErrorToFile(
+            e as Error,
+            "transcripts.utils.ts",
+            "writeFallbackTranscript"
+        );
         return false;
     }
 }
