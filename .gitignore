@@ -5,3 +5,5 @@ chroma
 user_data
 
 .DS_Store
+
+production.env

@@ -27,3 +27,30 @@ export function logErrorToFile(
         console.error("Failed to write to error log file:", e);
     }
 }
+
+
+export function logMessageToFile(
+    content: string,
+    fileName: string,
+    functionName: string
+) {
+    const timestamp = new Date().toISOString();
+
+    // File name is today's date
+    const today = timestamp.split("T")[0]; // YYYY-MM-DD
+    const logPath = path.join(PATHS.LOGS_DIR, `${today}.log`);
+
+    // Ensure logs directory exists
+    if (!fs.existsSync(PATHS.LOGS_DIR)) {
+        fs.mkdirSync(PATHS.LOGS_DIR, { recursive: true });
+    }
+
+    // One-line entry format
+    const entry = `[${timestamp}] | Filename:${fileName} | Function:${functionName} MESSAGE: ${content}\n`;
+
+    try {
+        fs.appendFileSync(logPath, entry, "utf8");
+    } catch (e) {
+        console.error("Failed to write to message log file:", e);
+    }
+}

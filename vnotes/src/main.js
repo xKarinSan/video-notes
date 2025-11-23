@@ -59,7 +59,7 @@ import {
 } from "./utils/thumbnails.utils";
 
 import * as dotenv from "dotenv";
-import { logErrorToFile } from "./utils/logging.utils";
+import { logErrorToFile, logMessageToFile } from "./utils/logging.utils";
 
 const externalPath = path.join(app.getPath("userData"), ".env");
 dotenv.config({ path: externalPath });
@@ -80,11 +80,14 @@ let mainWindow = null;
 let innertube = null;
 
 function loadMainEnv() {
-    if (!app.isPackaged) {
-        dotenv.config();
-    } else {
-        const envPath = path.join(process.resourcesPath, ".env");
-        dotenv.config({ path: envPath });
+    const bundledEnv = app.isPackaged
+        ? path.join(process.resourcesPath, ".production.env")
+        : path.join(__dirname, "..", "runtime", ".production.env");
+
+    console.log("bundledEnv", bundledEnv);
+
+    if (fs.existsSync(bundledEnv)) {
+        dotenv.config({ path: bundledEnv });
     }
 }
 

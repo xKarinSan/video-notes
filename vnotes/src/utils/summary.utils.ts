@@ -7,17 +7,14 @@ import {
     GoogleGenAI,
 } from "@google/genai";
 
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import {
-    combineSummariesPrompt,
-    videoSummaryPrompt,
-} from "../prompts";
+import { videoSummaryPrompt } from "../prompts";
 import { execFile } from "node:child_process";
 import { ensureDir, fileExists } from "./files.utils";
 import Store from "electron-store";
 
 import { spawn } from "child_process";
 import { createRequire } from "node:module";
+import { logErrorToFile, logMessageToFile } from "./logging.utils";
 
 interface FileAPIMetadata {
     fileName: string;
@@ -27,8 +24,17 @@ interface FileAPIMetadata {
 let ai: GoogleGenAI | null = null;
 // new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 function initGeminiClient(apiKey: string) {
-    if (!ai) {
-        ai = new GoogleGenAI({ apiKey });
+    logMessageToFile(apiKey, "summary.utils.js", "initGeminiClient");
+
+    try {
+        if (!apiKey) {
+            throw new Error("Gemini API key is missing");
+        }
+        if (!ai) {
+            ai = new GoogleGenAI({ apiKey });
+        }
+    } catch (e) {
+        logErrorToFile(e as Error, "summary.utils.ts", "initGeminiClient");
     }
 }
 
@@ -84,14 +90,12 @@ async function compressVideoTo1FPS(
     });
 }
 
-
 function splitToParagraphs(text: string): string[] {
     return text
         .split(/\r?\n\s*\r?\n+/) // blank-line delimiters
         .map((p) => p.trim())
         .filter(Boolean);
 }
-
 
 async function waitUntilActive(
     fileOrName: string,
@@ -151,7 +155,7 @@ async function summariseVideo(videoId: string) {
         console.log("Compressing ....");
         const compressionStart = performance.now();
         const notesItemFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
-        await compressVideoTo1FPS(notesItemFilePath,tempOutputPath)
+        await compressVideoTo1FPS(notesItemFilePath, tempOutputPath);
         const compressionEnd = performance.now();
         console.log(
             `Execution time (compression): ${compressionEnd - compressionStart} ms`
@@ -214,7 +218,4 @@ async function summariseVideo(videoId: string) {
     return splitToParagraphs(combinedText);
 }
 
-export {
-    summariseVideo,
-    initGeminiClient,
-};
+export { summariseVideo, initGeminiClient };

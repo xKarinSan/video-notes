@@ -33,7 +33,10 @@ module.exports = {
         ],
         prune: true,
         icon: path.resolve(__dirname, "assets/icon"),
-        extraResource: [path.resolve(__dirname, "assets")],
+        extraResource: [
+            path.resolve(__dirname, "assets"),
+            path.resolve(__dirname, "production.env"),
+        ],
         executableName: "vnotes",
         osxSign: {
             identity: process.env.MAC_CODESIGN_IDENTITY,
