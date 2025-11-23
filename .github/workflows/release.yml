@@ -11,6 +11,7 @@ permissions:
 defaults:
   run:
     working-directory: vnotes
+
 env:
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
   MAC_CODESIGN_IDENTITY: ${{ secrets.MAC_CODESIGN_IDENTITY }}
@@ -25,20 +26,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
         include:
+          # -------- mac --------
           - os: macos-latest
-            build_cmd: |
-              npx electron-forge publish --platform=darwin --arch=x64
-              npx electron-forge publish --platform=darwin --arch=arm64
+            platform: darwin
+            arch: x64
+            publish_cmd: npx electron-forge publish --platform=darwin --arch=x64
+
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+            publish_cmd: npx electron-forge publish --platform=darwin --arch=arm64
+
+          # -------- Windows  --------
           - os: windows-latest
-            build_cmd: |
-              npx electron-forge publish --platform=win32 --arch=x64
+            platform: win32
+            arch: x64
+            publish_cmd: npx electron-forge publish --platform=win32 --arch=x64
+
+          # -------- Linux DEB--------
           - os: ubuntu-latest
-            build_cmd: |
-              sudo apt-get update
-              sudo apt-get install -y rpm fakeroot dpkg
-              npx electron-forge publish --platform=linux --arch=x64
+            platform: linux
+            arch: x64
+            linux_kind: deb
+            publish_cmd: npx electron-forge publish --platform=linux --arch=x64
+
+          # -------- Linux RPM --------
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            linux_kind: rpm
+            publish_cmd: npx electron-forge publish --platform=linux --arch=x64
 
     runs-on: ${{ matrix.os }}
 
@@ -51,22 +69,38 @@ jobs:
           cache: npm
           cache-dependency-path: vnotes/package-lock.json
 
-      - name: Install deps
+      # Linux toolchain for deb/rpm makers
+      - name: linux build deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm fakeroot dpkg
+
+      - name: all other deps
         run: npm ci
 
-      - name: Create production.env
+      # ffmpeg for the correct platform and archi
+      - name: rebuild ffmpeg-static for target arch
+        shell: bash
+        run: |
+          echo "rebuilding ffmpeg-static for ${{ matrix.platform }} / ${{ matrix.arch }}"
+          npm rebuild ffmpeg-static --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} || true
+
+      # production.env
+      - name: create production.env
         shell: bash
         run: |
           cat > production.env << 'EOF'
           GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
           EOF
 
-      - name: Verify production.env exists
+      - name: check if production.env exists
         shell: bash
         run: ls -la production.env
 
-      - name: Setup signing keychain (macOS)
-        if: startsWith(matrix.os, 'macos')
+      # mac signing
+      - name: setup signing keychain (macOS)
+        if: runner.os == 'macOS'
         env:
           MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
           MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
@@ -79,18 +113,27 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "" "$KEYCHAIN"
           security import "$CERT_P12" -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
-          # Make our keychain first in search list so codesign finds the identity
           security list-keychains -d user -s "$KEYCHAIN" login.keychain
-          # Allow codesign/xcodebuild to use the key without UI prompts
           security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
-          # Sanity: print identities so we can see the exact string to match
           security find-identity -v -p codesigning || true
 
-      - name: Make + Publish
+      - name: publish artefact
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           MAC_CODESIGN_IDENTITY: ${{ secrets.MAC_CODESIGN_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: ${{ matrix.build_cmd }}
+          LINUX_KIND: ${{ matrix.linux_kind }}
+        run: |
+          # limit linux makers so DEB/RPM jobs don't duplicate outputs
+          if [[ "${{ matrix.platform }}" == "linux" ]]; then
+            if [[ "$LINUX_KIND" == "deb" ]]; then
+              export ELECTRON_FORGE_MAKE_TARGETS="@electron-forge/maker-deb"
+            elif [[ "$LINUX_KIND" == "rpm" ]]; then
+              export ELECTRON_FORGE_MAKE_TARGETS="@electron-forge/maker-rpm"
+            fi
+          fi
+
+          ${{ matrix.publish_cmd }}
