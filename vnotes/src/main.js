@@ -81,11 +81,9 @@ let innertube = null;
 
 function loadMainEnv() {
     const bundledEnv = app.isPackaged
-        ? path.join(process.resourcesPath, ".production.env")
-        : path.join(__dirname, "..", "runtime", ".production.env");
-
-    console.log("bundledEnv", bundledEnv);
-
+        ? path.join(process.resourcesPath, "production.env")
+        : path.join(process.cwd(), "production.env");
+    logMessageToFile(bundledEnv, "main.js", "loadMainEnv");
     if (fs.existsSync(bundledEnv)) {
         dotenv.config({ path: bundledEnv });
     }
