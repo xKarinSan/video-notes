@@ -53,14 +53,16 @@ jobs:
 
       - name: Install deps
         run: npm ci
-        
+
       - name: Create production.env
+        shell: bash
         run: |
           cat > production.env << 'EOF'
           GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
           EOF
 
       - name: Verify production.env exists
+        shell: bash
         run: ls -la production.env
 
       - name: Setup signing keychain (macOS)
