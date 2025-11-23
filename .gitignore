@@ -1,9 +1,7 @@
-.env
 __pycache__
 chroma
 
 user_data
 
 .DS_Store
-
-production.env
+*.env
