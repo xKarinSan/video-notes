@@ -1,5 +1,4 @@
 import { app, BrowserWindow, ipcMain } from "electron";
-import { fetchTranscript } from "youtube-transcript-plus";
 import { updateElectronApp, UpdateSourceType } from "update-electron-app";
 
 import path from "node:path";
@@ -46,12 +45,6 @@ import {
     syncSnapshots,
     writeNotesItem,
 } from "./utils/notesItems.utils";
-import {
-    deleteTranscript,
-    writeYoutubeTranscript,
-    writeTranscriptFallback,
-    writeFallbackTranscript,
-} from "./utils/transcripts.utils";
 import { summariseVideo, initGeminiClient } from "./utils/summary.utils";
 import {
     deleteVideoThumbnail,
@@ -201,18 +194,6 @@ ipcMain.handle(
 
             // get thumbnails
             const videoThumbnail = await setVideoThumbnail(videoId);
-            const openAIKey = await store.get("settings.open_ai_key");
-            const transcriptText = await writeTranscriptFallback(
-                videoId,
-                openAIKey
-            );
-            const savedTranscript = await writeFallbackTranscript(
-                videoId,
-                transcriptText
-            );
-            if (!transcriptText || !savedTranscript) {
-                throw Error("Transcript generation failed!");
-            }
 
             const uploadDateInMs = new Date().getTime();
             const videoMetadata = {
@@ -237,13 +218,11 @@ ipcMain.handle(
                 !(
                     isVideoDownloaded &&
                     isMetadataDownloaded &&
-                    savedTranscript &&
                     videoThumbnail != null
                 )
             ) {
                 await deleteVideoMetadata(videoId);
                 await deleteVideoFile(videoId);
-                await deleteTranscript(videoId);
                 await deleteVideoThumbnail(videoId);
                 throw Error("Video download failed!");
             }
@@ -326,31 +305,6 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
         );
         console.log("add-youtube-video |isVideoDownloaded ", isVideoDownloaded);
 
-        console.log("AFTER download call");
-        let savedTranscript = false;
-        try {
-            console.log("add-youtube-video | try");
-            let transcript = [];
-
-            await fetchTranscript(youtubeVideoId).then((res) => {
-                transcript = res;
-            });
-            savedTranscript = await writeYoutubeTranscript(videoId, transcript);
-        } catch (e) {
-            console.log("add-youtube-video | e | before fallback", e);
-            const openAIKey = await store.get("settings.open_ai_key");
-            const transcriptText = await writeTranscriptFallback(
-                videoId,
-                openAIKey
-            );
-            savedTranscript = await writeFallbackTranscript(
-                videoId,
-                transcriptText
-            );
-        }
-        console.log("add-youtube-video | savedTranscript");
-        console.log("add-youtube-video-success");
-
         // download the metadata
         const largestThumbnail = thumbnail[0];
         videoMetadata = {
@@ -377,10 +331,9 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
             isMetadataDownloaded
         );
 
-        if (!(isVideoDownloaded && isMetadataDownloaded && savedTranscript)) {
+        if (!(isVideoDownloaded && isMetadataDownloaded)) {
             await deleteVideoMetadata(videoId);
             await deleteVideoFile(videoId);
-            await deleteTranscript(videoId);
             return null;
         }
         store.set("yt." + youtubeVideoId, videoId);
@@ -566,14 +519,12 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
             notesDeleted,
             recordDeleted,
             snapshotsDeleted,
-            transcriptsDeleted,
             thumbnailDeleted,
         ] = await Promise.all([
             deleteNotesFromList(notesIdList),
             deleteNotesMetadata(notesIdList),
             deleteVideoRecord(videoId),
             deleteSnapshotFromNote(notesIdList),
-            deleteTranscript(videoId),
             deleteVideoThumbnail(videoId),
         ]);
         if (
@@ -581,7 +532,6 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
             !recordDeleted ||
             !notesContentsDeleted ||
             !snapshotsDeleted ||
-            !transcriptsDeleted ||
             !thumbnailDeleted
         )
             return false;
@@ -617,24 +567,6 @@ ipcMain.handle("delete-notes-record", async (_, noteId) => {
     } catch (e) {
         console.log("delete-video-record | e", e);
         logErrorToFile(e, "main.js", "delete-video-record");
-        return false;
-    }
-});
-
-ipcMain.handle("get-openai-key", async () => {
-    try {
-        return await store.get("settings.open_ai_key");
-    } catch (e) {
-        logErrorToFile(e, "main.js", "get-openai-key");
-        return null;
-    }
-});
-ipcMain.handle("set-openai-key", async (_, openAiKey) => {
-    try {
-        await store.set("settings.open_ai_key", openAiKey);
-        return true;
-    } catch (e) {
-        logErrorToFile(e, "main.js", "set-openai-key");
         return false;
     }
 });
@@ -698,11 +630,6 @@ app.whenReady().then(() => {
     PATHS.NOTES_DIR = path.join(PATHS.USER_DATA_BASE, "notes");
     PATHS.NOTES_ITEM_DIR = path.join(PATHS.USER_DATA_BASE, "notes_items");
     PATHS.SNAPSHOTS_DIR = path.join(PATHS.USER_DATA_BASE, "snapshots");
-    PATHS.TRANSCRIPTS_DIR = path.join(PATHS.USER_DATA_BASE, "transcripts");
-    PATHS.TIMESTAMPED_TRANSCRIPTS_DIR = path.join(
-        PATHS.USER_DATA_BASE,
-        "timestamped_transcripts"
-    );
 
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.

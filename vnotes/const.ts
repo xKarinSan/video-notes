@@ -10,8 +10,6 @@ export const PATHS = {
     NOTES_DIR: "",
     NOTES_ITEM_DIR: "",
     SNAPSHOTS_DIR: "",
-    TRANSCRIPTS_DIR: "",
-    TIMESTAMPED_TRANSCRIPTS_DIR: "",
     LOGS_DIR: "",
 };
 
@@ -26,11 +24,6 @@ PATHS.THUMBNAILS_DIR = path.join(PATHS.USER_DATA_BASE, "thumbnails");
 PATHS.NOTES_DIR = path.join(PATHS.USER_DATA_BASE, "notes");
 PATHS.NOTES_ITEM_DIR = path.join(PATHS.USER_DATA_BASE, "notes_items");
 PATHS.SNAPSHOTS_DIR = path.join(PATHS.USER_DATA_BASE, "snapshots");
-PATHS.TRANSCRIPTS_DIR = path.join(PATHS.USER_DATA_BASE, "transcripts");
-PATHS.TIMESTAMPED_TRANSCRIPTS_DIR = path.join(
-    PATHS.USER_DATA_BASE,
-    "timestamped_transcripts"
-);
 
 PATHS.LOGS_DIR = path.join(PATHS.USER_DATA_BASE, "logs");
 

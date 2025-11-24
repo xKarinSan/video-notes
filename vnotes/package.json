@@ -63,7 +63,6 @@
         "utf-8-validate": "^6.0.5",
         "uuid": "^11.1.0",
         "ws": "^8.18.3",
-        "youtube-transcript-plus": "^1.1.1",
         "youtubei.js": "^15.1.1"
     }
 }

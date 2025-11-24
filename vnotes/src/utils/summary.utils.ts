@@ -57,25 +57,29 @@ async function compressVideoTo1FPS(
             "-i",
             inputPath,
 
-            // video filters / compression
             "-vf",
-            "scale=640:-2", // downscale width to 640, keep aspect
-            "-r",
-            "1", // 1 FPS
-
-            // video codec settings
-            "-vcodec",
+            "fps=1,scale=480:-2",
+            "-c:v",
             "libx264",
             "-crf",
-            "30",
+            "33",
             "-preset",
             "veryfast",
+            "-g",
+            "120",
+            "-keyint_min",
+            "120",
+            "-sc_threshold",
+            "0",
 
-            // audio settings (optional but same as your original)
-            "-acodec",
+            "-c:a",
             "aac",
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
             "-b:a",
-            "64k",
+            "48k",
 
             outputPath,
         ];
@@ -124,21 +128,6 @@ async function waitUntilActive(
         // re-fetch updated state
         file = await ai.files.get({ name: file.name });
     }
-}
-
-function runFfmpeg(ffmpegPath: string, args: string[]): Promise<void> {
-    return new Promise((resolve, reject) => {
-        execFile(ffmpegPath, args, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`ffmpeg stderr: ${stderr}`);
-                reject(error);
-                return;
-            }
-            // Optional: log success output
-            // console.log(`ffmpeg stdout: ${stdout}`);
-            resolve();
-        });
-    });
 }
 
 async function summariseVideo(videoId: string) {
