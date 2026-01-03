@@ -206,7 +206,11 @@ video-notes/
 │       └── logs/                    # Error and message logs
 │
 ├── vnotes-notion/                   # Notion integration (new)
-│   └── README.md                    # Feature overview
+│   ├── index.js                     # Main integration logic
+│   ├── package.json                 # Dependencies and scripts
+│   ├── .env.example                 # Environment variable template
+│   ├── .gitignore                   # Git ignore (protects API keys)
+│   └── README.md                    # Setup and usage documentation
 │
 ├── hooks/                           # Reusable hooks for claude
 ├── src/                             # Python CLI (experimental)
@@ -350,36 +354,93 @@ try {
 
 ### Overview
 
-The VNotes Notion integration brings two core VNotes features to Notion workspaces:
+The VNotes Notion integration brings VNotes features to Notion workspaces. Currently implements basic command functionality, with plans to add full AI summarization and timestamped snapshots.
 
+**Current Implementation**: Simple CLI tool with two commands that append content to Notion pages.
+
+**Planned Features**:
 1. **AI Summarization/Overview**: Generate AI-powered summaries of video content using Gemini
 2. **Timestamped Snapshots**: Capture and organize visual snapshots from videos with precise timestamps
 
-### Shared Components with VNotes Electron
+### Development Commands
 
-The integration should reuse core logic from the Electron app:
+```bash
+# Navigate to the integration directory
+cd vnotes-notion
 
-- **Video compression pipeline**: Same FFmpeg settings (1fps, 480p) from `vnotes/src/utils/summary.utils.ts`
-- **Gemini API integration**: Use `gemini-2.5-flash-lite` model with same prompts from `vnotes/src/prompts.ts`
-- **NotesItem data model**: Adapt the NotesItem structure for Notion blocks
-- **Caching strategy**: Cache compressed videos and uploaded Gemini files to minimize API costs
+# Install dependencies
+npm install
 
-### Integration Architecture
+# Run commands
+npm start /overview   # Appends "overview" to Notion page
+npm start /snapshot   # Appends "snapshot" to Notion page
+```
 
-When implementing the Notion integration:
+### Environment Setup
 
-- **Notion SDK**: Use `@notionhq/client` for database and page creation
-- **Block mapping**: Map NotesItems to Notion blocks (paragraphs for text, images for snapshots)
-- **Timestamp linking**: Store video timestamps in Notion block metadata or as inline references
-- **Authentication**: Notion API key in environment variables (never committed)
-- **Error handling**: Follow same logging pattern as Electron app
+The integration requires a Notion API key and page ID:
+
+1. Create `vnotes-notion/.env`:
+   ```
+   NOTION_API_KEY=your_notion_api_key_here
+   NOTION_PAGE_ID=your_notion_page_id_here
+   ```
+
+2. Create a Notion integration at [https://www.notion.so/my-integrations](https://www.notion.so/my-integrations)
+3. Share your Notion page with the integration
+4. Copy the page ID from the URL
+
+**CRITICAL**: Never commit `.env` files. The `.gitignore` protects these credentials.
+
+### Current Architecture
+
+**Technology Stack**:
+- `@notionhq/client` v5.6.0 - Official Notion JavaScript SDK
+- `dotenv` v17.2.3 - Environment variable management
+- Node.js ES modules (`"type": "module"`)
+
+**File Structure**:
+- `index.js` - Main entry point with command handlers
+- `.env` - Environment variables (gitignored)
+- `.env.example` - Template for environment setup
+
+**Command Implementation** (`index.js`):
+```js
+async function appendTextToPage(pageId, text) {
+  await notion.blocks.children.append({
+    block_id: pageId,
+    children: [{
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [{ type: 'text', text: { content: text } }]
+      }
+    }]
+  });
+}
+```
+
+Commands are executed via CLI arguments:
+- `/overview` → calls `overviewCommand()` → appends "overview"
+- `/snapshot` → calls `snapshotCommand()` → appends "snapshot"
+
+### Future Integration Architecture
+
+When implementing full VNotes features:
+
+- **Video compression pipeline**: Reuse FFmpeg settings (1fps, 480p) from `vnotes/src/utils/summary.utils.ts`
+- **Gemini API integration**: Use `gemini-2.5-flash-lite` model with prompts from `vnotes/src/prompts.ts`
+- **NotesItem data model**: Map NotesItem structure to Notion blocks (paragraphs for text, images for snapshots)
+- **Caching strategy**: Cache compressed videos and uploaded Gemini files (48hr expiry)
+- **Block mapping**: Convert NotesItems to Notion blocks with timestamp metadata
+- **Error handling**: Add logging similar to Electron app pattern
 
 ### Design Principles
 
-- **Offline-first where possible**: Only require network for video downloads and AI summarization
-- **Efficient API usage**: Reuse cached compressed videos and Gemini file uploads (48hr expiry)
-- **Security-first**: Environment-based configuration for API keys
-- **Block-based content**: Leverage Notion's block structure for rich note formatting
+- **Security-first**: API keys in environment variables (never committed)
+- **Block-based content**: Leverage Notion's block API for rich formatting
+- **Efficient API usage**: Cache compressed videos and Gemini uploads to minimize costs
+- **Simple CLI interface**: Command-based execution for easy scripting and automation
 
 ## Python CLI (Experimental)
 
