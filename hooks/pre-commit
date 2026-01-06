@@ -1,0 +1,30 @@
+#!/bin/sh
+# Pre-commit hook to check and update CLAUDE.md
+# This hook uses Claude API to ensure CLAUDE.md is up-to-date with codebase changes
+
+echo "🤖 Running CLAUDE.md check..."
+
+# Check if Node.js is available
+if ! command -v node >/dev/null 2>&1; then
+    echo "⚠️  Node.js not found. Skipping CLAUDE.md check."
+    exit 0
+fi
+
+# Run the CLAUDE.md checker script
+node hooks/check-claude-md.js
+
+# Capture exit code
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "✅ CLAUDE.md check passed"
+elif [ $EXIT_CODE -eq 2 ]; then
+    echo "📝 CLAUDE.md was updated. Please review and stage the changes."
+    echo "   Run: git add CLAUDE.md && git commit --amend --no-edit"
+    exit 1
+else
+    echo "❌ CLAUDE.md check failed"
+    exit 1
+fi
+
+exit 0

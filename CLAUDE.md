@@ -9,6 +9,7 @@ This is a **dual-architecture project** for video-based learning:
 1. **VNotes Desktop App** (`/vnotes/`) - Production Electron app (v0.2.0) for taking notes from videos with AI summarization
 2. **VNotes Notion Integration** (`/vnotes-notion/`) - Integration bringing VNotes features to Notion workspaces
 3. **Python CLI** (`/src/`, `/ui/`) - Experimental agent-based system for prototyping features
+4. **Git Hooks** (`/hooks/`) - Automated CLAUDE.md maintenance system
 
 Most active development happens in `/vnotes/`. The Python code is for experimentation only.
 
@@ -212,7 +213,14 @@ video-notes/
 │   ├── .gitignore                   # Git ignore (protects API keys)
 │   └── README.md                    # Setup and usage documentation
 │
-├── hooks/                           # Reusable hooks for claude
+├── hooks/                           # Git hooks for CLAUDE.md automation
+│   ├── pre-commit                   # Pre-commit hook (shell script)
+│   ├── check-claude-md.js           # Node.js script for checking/updating CLAUDE.md
+│   ├── install.sh                   # Installation script
+│   ├── .env.example                 # Template for ANTHROPIC_API_KEY
+│   ├── QUICK_START.md               # Quick setup guide (3 minutes)
+│   ���── README.md                    # Detailed documentation
+│
 ├── src/                             # Python CLI (experimental)
 │   ├── main.py                      # Agent orchestrator
 │   ├── models.py                    # Pydantic data models
@@ -350,6 +358,159 @@ try {
 }
 ```
 
+## Git Hooks for CLAUDE.md Automation (`/hooks/`)
+
+### Overview
+
+The `/hooks/` directory contains a **pre-commit hook system** that automatically maintains this CLAUDE.md file using Claude AI. It ensures documentation stays synchronized with code changes.
+
+**How it works**:
+1. On every `git commit`, the hook analyzes staged changes
+2. Uses Claude API to check if CLAUDE.md needs updating
+3. Automatically generates or updates CLAUDE.md based on code changes
+4. Blocks commit if updates are made (so you can review)
+
+### Quick Setup
+
+```bash
+# Navigate to hooks directory
+cd hooks
+
+# Run installer
+./install.sh
+
+# Set your Anthropic API key
+export ANTHROPIC_API_KEY=sk-ant-api03-...
+
+# Or create .env file
+echo 'ANTHROPIC_API_KEY=sk-ant-api03-...' > .env
+```
+
+See `hooks/QUICK_START.md` for detailed 3-minute setup guide.
+
+### Files
+
+- **`pre-commit`**: Shell script that Git runs before each commit
+- **`check-claude-md.js`**: Node.js script that analyzes changes and calls Claude API
+- **`install.sh`**: One-command installer for the hook
+- **`.env.example`**: Template for API key configuration
+- **`QUICK_START.md`**: Quick setup guide (3 minutes)
+- **`README.md`**: Detailed documentation and troubleshooting
+
+### API Key Configuration
+
+The hook requires an Anthropic API key. Three options:
+
+**Option 1: Environment Variable (Recommended)**
+```bash
+export ANTHROPIC_API_KEY=sk-ant-api03-...
+
+# Make permanent (zsh)
+echo 'export ANTHROPIC_API_KEY=sk-ant-api03-...' >> ~/.zshrc
+```
+
+**Option 2: Project Root .env**
+```bash
+echo 'ANTHROPIC_API_KEY=sk-ant-api03-...' > .env
+```
+
+**Option 3: Hooks Directory .env**
+```bash
+echo 'ANTHROPIC_API_KEY=sk-ant-api03-...' > hooks/.env
+```
+
+The hook automatically checks all three locations.
+
+**CRITICAL**: Never commit `.env` files. Ensure they're in `.gitignore`.
+
+### Hook Behavior
+
+**First commit (no CLAUDE.md)**:
+- Generates new CLAUDE.md based on codebase
+- Stages the file automatically
+- Commit proceeds normally
+
+**Subsequent commits (CLAUDE.md exists)**:
+- Analyzes staged changes + diff content
+- Checks if documentation needs updating
+- If no update needed: commit proceeds
+- If update needed: updates CLAUDE.md, blocks commit for review
+
+**When blocked**:
+```bash
+# Review the changes
+git diff CLAUDE.md
+
+# Stage and amend
+git add CLAUDE.md
+git commit --amend --no-edit
+```
+
+### Bypass Hook
+
+To skip the hook for a specific commit:
+```bash
+git commit --no-verify -m "Your message"
+```
+
+Use sparingly! The hook helps keep documentation synchronized.
+
+### Technology Details
+
+- **Model**: `claude-sonnet-4-5-20250929`
+- **Cost per check**: ~$0.01-0.05 (only runs on commits)
+- **Node.js required**: The script needs Node.js to run
+- **Exit codes**:
+  - `0` = Success (no updates needed)
+  - `1` = Error occurred
+  - `2` = CLAUDE.md updated (review needed)
+
+### What Gets Analyzed
+
+ The hook examines:
+- Staged files list
+- Git diff content
+- Current CLAUDE.md content
+- Project structure
+
+It updates CLAUDE.md for:
+- New features or components
+- Architecture changes
+- New patterns or conventions
+- Important behavioral changes
+
+It **doesn't** update for:
+- Minor bug fixes
+- Small refactors
+- Comment changes
+- Formatting updates
+
+### Troubleshooting
+
+**"ANTHROPIC_API_KEY not set"**
+- Follow API key setup above
+
+**"Node.js not found"**
+```bash
+# macOS with Homebrew
+brew install node
+
+# Or download from nodejs.org
+```
+
+**Hook not running**
+```bash
+# Check installation
+ls -la .git/hooks/pre-commit
+
+# Reinstall if needed
+cd hooks && ./install.sh
+```
+
+**Want to customize**
+- Edit `check-claude-md.js` to change model, prompts, or behavior
+- See `hooks/README.md` for advanced configuration
+
 ## VNotes Notion Integration (`/vnotes-notion/`)
 
 ### Overview
@@ -464,3 +625,4 @@ Not actively maintained. Focus on `/vnotes/` for production work.
 - **File-based storage**: No database. All data in JSON + file system. Keep this in mind for data integrity.
 - **Offline-first**: App should work offline except for YouTube downloads and AI summarization
 - **Context isolation**: Renderer has no Node.js access by design. All system operations must go through preload bridge.
+- **CLAUDE.md automation**: This documentation is maintained by an automated pre-commit hook (see Git Hooks section). Review changes after the hook updates this file.
