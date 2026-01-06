@@ -64,8 +64,14 @@ loadEnvFile();
 
 // Configuration
 const CLAUDE_MD_PATH = path.join(process.cwd(), 'CLAUDE.md');
+const LOG_DIR = path.join(process.cwd(), 'hooks', 'log');
 const API_KEY = process.env.ANTHROPIC_API_KEY;
 const MODEL = 'claude-sonnet-4-5-20250929';
+
+// Ensure log directory exists
+if (!fs.existsSync(LOG_DIR)) {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+}
 
 // ANSI color codes
 const colors = {
@@ -83,6 +89,22 @@ const colors = {
  */
 function log(message, color = 'reset') {
   console.log(`${colors[color]}${message}${colors.reset}`);
+}
+
+/**
+ * Save API interaction log
+ */
+function saveLogFile(logData) {
+  const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
+  const logFileName = `${timestamp}.json`;
+  const logFilePath = path.join(LOG_DIR, logFileName);
+
+  try {
+    fs.writeFileSync(logFilePath, JSON.stringify(logData, null, 2), 'utf-8');
+    log(`📊 Saved log to: hooks/log/${logFileName}`, 'cyan');
+  } catch (error) {
+    log(`⚠️  Failed to save log: ${error.message}`, 'yellow');
+  }
 }
 
 /**
@@ -192,16 +214,18 @@ function getKeyFiles() {
 /**
  * Call Claude API
  */
-function callClaudeAPI(prompt) {
+function callClaudeAPI(prompt, context = {}) {
   return new Promise((resolve, reject) => {
-    const postData = JSON.stringify({
+    const startTime = Date.now();
+    const requestBody = {
       model: MODEL,
       max_tokens: 8000,
       messages: [{
         role: 'user',
         content: prompt
       }]
-    });
+    };
+    const postData = JSON.stringify(requestBody);
 
     const options = {
       hostname: 'api.anthropic.com',
@@ -216,6 +240,23 @@ function callClaudeAPI(prompt) {
       }
     };
 
+    // Initialize log data
+    const logData = {
+      timestamp: new Date().toISOString(),
+      context: context,
+      request: {
+        model: MODEL,
+        max_tokens: 8000,
+        prompt_length: prompt.length,
+        prompt_preview: prompt.substring(0, 500) + (prompt.length > 500 ? '...' : ''),
+        full_prompt: prompt
+      },
+      response: null,
+      token_usage: null,
+      duration_ms: null,
+      error: null
+    };
+
     const req = https.request(options, (res) => {
       let data = '';
 
@@ -224,24 +265,62 @@ function callClaudeAPI(prompt) {
       });
 
       res.on('end', () => {
+        const endTime = Date.now();
+        logData.duration_ms = endTime - startTime;
+
         if (res.statusCode === 200) {
           try {
             const response = JSON.parse(data);
+
+            // Log full response
+            logData.response = {
+              status_code: res.statusCode,
+              full_response: response,
+              content_preview: response.content && response.content[0] && response.content[0].text
+                ? response.content[0].text.substring(0, 500) + (response.content[0].text.length > 500 ? '...' : '')
+                : null
+            };
+
+            // Extract token usage
+            if (response.usage) {
+              logData.token_usage = {
+                input_tokens: response.usage.input_tokens,
+                output_tokens: response.usage.output_tokens,
+                total_tokens: (response.usage.input_tokens || 0) + (response.usage.output_tokens || 0)
+              };
+
+              log(`📊 Token usage: ${logData.token_usage.input_tokens} in / ${logData.token_usage.output_tokens} out / ${logData.token_usage.total_tokens} total`, 'cyan');
+            }
+
+            // Save log
+            saveLogFile(logData);
+
             if (response.content && response.content[0] && response.content[0].text) {
               resolve(response.content[0].text);
             } else {
+              logData.error = 'Unexpected API response structure';
+              saveLogFile(logData);
               reject(new Error('Unexpected API response structure'));
             }
           } catch (error) {
+            logData.error = `Failed to parse API response: ${error.message}`;
+            logData.response = { status_code: res.statusCode, raw_data: data };
+            saveLogFile(logData);
             reject(new Error(`Failed to parse API response: ${error.message}`));
           }
         } else {
+          logData.error = `API request failed with status ${res.statusCode}`;
+          logData.response = { status_code: res.statusCode, raw_data: data };
+          saveLogFile(logData);
           reject(new Error(`API request failed with status ${res.statusCode}: ${data}`));
         }
       });
     });
 
     req.on('error', (error) => {
+      logData.error = error.message;
+      logData.duration_ms = Date.now() - startTime;
+      saveLogFile(logData);
       reject(error);
     });
 
@@ -283,7 +362,10 @@ ${content}
 Please generate a comprehensive CLAUDE.md file that will help AI assistants understand and work with this codebase effectively. Format it in clean Markdown with clear sections and headers.`;
 
   try {
-    const claudeMd = await callClaudeAPI(prompt);
+    const claudeMd = await callClaudeAPI(prompt, {
+      action: 'generate_new_claude_md',
+      files_analyzed: Object.keys(keyFiles).length
+    });
     fs.writeFileSync(CLAUDE_MD_PATH, claudeMd, 'utf-8');
     log('✅ Successfully generated CLAUDE.md', 'green');
 
@@ -357,7 +439,12 @@ Important:
 - Preserve the existing structure and format of CLAUDE.md`;
 
   try {
-    const response = await callClaudeAPI(prompt);
+    const response = await callClaudeAPI(prompt, {
+      action: 'check_claude_md_consistency',
+      staged_files_count: stagedFiles.length,
+      staged_files: stagedFiles,
+      has_significant_changes: hasSignificantChanges
+    });
 
     // Try to extract JSON from the response
     let jsonMatch = response.match(/\{[\s\S]*\}/);

@@ -131,6 +131,50 @@ It determines if updates are needed based on:
 - New patterns or conventions
 - Important behavioral changes
 
+## API Request Logging
+
+**All API requests and responses are automatically logged** to `hooks/log/` with timestamped filenames.
+
+Each log includes:
+- **Full request**: Complete prompt sent to Claude
+- **Full response**: Complete API response
+- **Token usage**: Input/output/total tokens used
+- **Performance**: API call duration
+- **Context**: What operation was being performed
+
+Example log structure:
+```json
+{
+  "timestamp": "2026-01-06T21:30:00.000Z",
+  "context": {
+    "action": "check_claude_md_consistency",
+    "staged_files": ["src/feature.js"]
+  },
+  "token_usage": {
+    "input_tokens": 12500,
+    "output_tokens": 3200,
+    "total_tokens": 15700
+  },
+  "duration_ms": 8450
+}
+```
+
+**View logs:**
+```bash
+# List all logs
+ls -lt hooks/log/*.json
+
+# View latest log
+cat "$(ls -t hooks/log/*.json | head -1)" | jq .
+
+# Check token usage
+jq .token_usage hooks/log/*.json
+```
+
+**Log files are gitignored** and won't be committed.
+
+See [hooks/log/README.md](./log/README.md) for detailed logging documentation.
+
 ## Exit Codes
 
 The hook uses specific exit codes:

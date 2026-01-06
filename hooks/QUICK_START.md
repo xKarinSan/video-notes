@@ -152,9 +152,30 @@ git commit --no-verify -m "Skip hook for this commit"
 ## Cost Considerations
 
 - The hook uses Claude Sonnet 4.5
-- Typical cost per check: ~$0.01-0.05
+- Typical cost per check: ~$0.01-0.09
 - Only runs when you commit (not on every save)
 - Can be disabled with `--no-verify` if needed
+
+## Logging & Monitoring
+
+All API requests and responses are logged to `hooks/log/` (gitignored):
+
+```bash
+# View latest log
+cat "$(ls -t hooks/log/*.json | head -1)" | jq .
+
+# Check token usage
+jq .token_usage hooks/log/*.json
+
+# Calculate total cost
+jq -s 'map(.token_usage.total_tokens // 0) | add' hooks/log/*.json
+```
+
+Each log includes:
+- Full request/response
+- Token usage (input/output/total)
+- API call duration
+- Context about what was being checked
 
 ## Tips
 
