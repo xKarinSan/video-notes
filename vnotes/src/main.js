@@ -1,5 +1,4 @@
 import { app, BrowserWindow, ipcMain } from "electron";
-import { fetchTranscript } from "youtube-transcript-plus";
 import { updateElectronApp, UpdateSourceType } from "update-electron-app";
 
 import path from "node:path";
@@ -46,22 +45,17 @@ import {
     syncSnapshots,
     writeNotesItem,
 } from "./utils/notesItems.utils";
-import {
-    deleteTranscript,
-    getTextTranscript,
-    writeYoutubeTranscript,
-    writeTranscriptFallback,
-    writeFallbackTranscript,
-} from "./utils/transcripts.utils";
-import {
-    splitToChunks,
-    summariseCombinedSummaries,
-} from "./utils/summary.utils";
+import { summariseVideo, initGeminiClient } from "./utils/summary.utils";
 import {
     deleteVideoThumbnail,
     setVideoThumbnail,
 } from "./utils/thumbnails.utils";
 
+import * as dotenv from "dotenv";
+import { logErrorToFile, logMessageToFile } from "./utils/logging.utils";
+
+const externalPath = path.join(app.getPath("userData"), ".env");
+dotenv.config({ path: externalPath });
 updateElectronApp({
     updateSource: {
         type: UpdateSourceType.ElectronPublicUpdateService,
@@ -69,6 +63,7 @@ updateElectronApp({
     },
     updateInterval: "1 hour",
 });
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
     app.quit();
@@ -76,6 +71,20 @@ if (started) {
 let store = null;
 let mainWindow = null;
 let innertube = null;
+
+function loadMainEnv() {
+    const envPath = app.isPackaged
+        ? path.join(process.resourcesPath, "production.env")
+        : path.join(process.cwd(), "production.env");
+    logMessageToFile(envPath, "main.js", "loadMainEnv");
+
+    if (fs.existsSync(envPath)) {
+        dotenv.config({ path: envPath });
+        console.log("Env loaded!");
+    } else {
+        console.warn("Env file NOT found:", envPath);
+    }
+}
 
 const createWindow = async () => {
     const iconPath = app.isPackaged
@@ -98,9 +107,9 @@ const createWindow = async () => {
     });
 
     const lastPath = store.get("lastPath", "/");
+
     // and load the index.html of the app.
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-        // mainWindow.webContents.openDevTools();
         mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL + lastPath);
     } else {
         const indexPath = path.join(
@@ -151,6 +160,7 @@ ipcMain.handle("get-all-metadata", async () => {
                 data.id = baseId;
             } catch (e) {
                 console.log("e", e);
+                logErrorToFile(e, "main.js", "get-all-metadata");
                 data = {};
             }
             return data;
@@ -184,18 +194,6 @@ ipcMain.handle(
 
             // get thumbnails
             const videoThumbnail = await setVideoThumbnail(videoId);
-            const openAIKey = await store.get("settings.open_ai_key");
-            const transcriptText = await writeTranscriptFallback(
-                videoId,
-                openAIKey
-            );
-            const savedTranscript = await writeFallbackTranscript(
-                videoId,
-                transcriptText
-            );
-            if (!transcriptText || !savedTranscript) {
-                throw Error("Transcript generation failed!");
-            }
 
             const uploadDateInMs = new Date().getTime();
             const videoMetadata = {
@@ -220,13 +218,11 @@ ipcMain.handle(
                 !(
                     isVideoDownloaded &&
                     isMetadataDownloaded &&
-                    savedTranscript &&
                     videoThumbnail != null
                 )
             ) {
                 await deleteVideoMetadata(videoId);
                 await deleteVideoFile(videoId);
-                await deleteTranscript(videoId);
                 await deleteVideoThumbnail(videoId);
                 throw Error("Video download failed!");
             }
@@ -236,7 +232,7 @@ ipcMain.handle(
             return res;
         } catch (e) {
             console.log("add-video-file :", e);
-
+            logErrorToFile(e, "main.js", "add-video-file");
             return null;
         }
     }
@@ -276,6 +272,11 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
 
         videoId = randomUUID();
         const info = await innertube.getInfo(youtubeVideoId);
+
+        let testFilePath = "res.json";
+        let testMetadataString = JSON.stringify(info, null, 2);
+        await fsp.writeFile(testFilePath, testMetadataString);
+
         const { basic_info, primary_info } = info;
         const {
             id: originalVideoId,
@@ -286,6 +287,8 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
             author: opName,
             thumbnail,
         } = basic_info;
+        console.log("basic_info", basic_info);
+        console.log("primary_info", primary_info);
 
         // get the upload date
         const { published } = primary_info;
@@ -293,36 +296,14 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
         let dateUploaded = new Date(uploadDateString).getTime();
 
         console.log("BEFORE download call");
+        console.log("originalVideoId", originalVideoId);
+        console.log("videoId", videoId);
         const isVideoDownloaded = await downloadYoutubeVideoFile(
             innertube,
             originalVideoId,
             videoId
         );
-
-        console.log("AFTER download call");
-        let savedTranscript = false;
-        try {
-            console.log("add-youtube-video | try");
-            let transcript = [];
-
-            await fetchTranscript(youtubeVideoId).then((res) => {
-                transcript = res;
-            });
-            savedTranscript = await writeYoutubeTranscript(videoId, transcript);
-        } catch (e) {
-            console.log("add-youtube-video | e | before fallback", e);
-            const openAIKey = await store.get("settings.open_ai_key");
-            const transcriptText = await writeTranscriptFallback(
-                videoId,
-                openAIKey
-            );
-            savedTranscript = await writeFallbackTranscript(
-                videoId,
-                transcriptText
-            );
-        }
-        console.log("add-youtube-video | savedTranscript");
-        console.log("add-youtube-video-success");
+        console.log("add-youtube-video |isVideoDownloaded ", isVideoDownloaded);
 
         // download the metadata
         const largestThumbnail = thumbnail[0];
@@ -350,10 +331,9 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
             isMetadataDownloaded
         );
 
-        if (!(isVideoDownloaded && isMetadataDownloaded && savedTranscript)) {
+        if (!(isVideoDownloaded && isMetadataDownloaded)) {
             await deleteVideoMetadata(videoId);
             await deleteVideoFile(videoId);
-            await deleteTranscript(videoId);
             return null;
         }
         store.set("yt." + youtubeVideoId, videoId);
@@ -363,6 +343,7 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
         return res;
     } catch (e) {
         console.log("add-youtube-video :", e);
+        logErrorToFile(e, "main.js", "add-youtube-video");
         return null;
     }
 });
@@ -394,7 +375,8 @@ ipcMain.handle("create-new-notes", async (_, videoId, videoName) => {
             return null;
         }
         return newNotes;
-    } catch {
+    } catch (e) {
+        logErrorToFile(e, "main.js", "create-new-notes");
         return null;
     }
 });
@@ -446,6 +428,7 @@ ipcMain.handle("get-current-notes", async (_, notesId) => {
         };
     } catch (e) {
         console.log("get-current-notes | e ", e);
+        logErrorToFile(e, "main.js", "get-current-notes");
         return null;
     }
 });
@@ -477,6 +460,7 @@ ipcMain.handle(
             return true;
         } catch (e) {
             console.log("save-current-notes | e", e);
+            logErrorToFile(e, "main.js", "save-current-notes ");
             return null;
         }
     }
@@ -504,6 +488,7 @@ ipcMain.handle("get-notes-by-videoid", async (_, videoId) => {
         return res.filter((note) => note !== null);
     } catch (e) {
         console.log("get-notes-by-videoid | e ", e);
+        logErrorToFile(e, "main.js", "get-notes-by-videoid");
         return null;
     }
 });
@@ -513,6 +498,7 @@ ipcMain.handle("get-all-notes-metadata", async () => {
         return getAllNotesMetadata();
     } catch (e) {
         console.log("get-all-notes-metadata | e ", e);
+        logErrorToFile(e, "main.js", "get-all-notes-metadata");
         return null;
     }
 });
@@ -533,14 +519,12 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
             notesDeleted,
             recordDeleted,
             snapshotsDeleted,
-            transcriptsDeleted,
             thumbnailDeleted,
         ] = await Promise.all([
             deleteNotesFromList(notesIdList),
             deleteNotesMetadata(notesIdList),
             deleteVideoRecord(videoId),
             deleteSnapshotFromNote(notesIdList),
-            deleteTranscript(videoId),
             deleteVideoThumbnail(videoId),
         ]);
         if (
@@ -548,7 +532,6 @@ ipcMain.handle("delete-video-record", async (_, videoId) => {
             !recordDeleted ||
             !notesContentsDeleted ||
             !snapshotsDeleted ||
-            !transcriptsDeleted ||
             !thumbnailDeleted
         )
             return false;
@@ -583,22 +566,7 @@ ipcMain.handle("delete-notes-record", async (_, noteId) => {
         return true;
     } catch (e) {
         console.log("delete-video-record | e", e);
-        return false;
-    }
-});
-
-ipcMain.handle("get-openai-key", async () => {
-    try {
-        return await store.get("settings.open_ai_key");
-    } catch (e) {
-        return null;
-    }
-});
-ipcMain.handle("set-openai-key", async (_, openAiKey) => {
-    try {
-        await store.set("settings.open_ai_key", openAiKey);
-        return true;
-    } catch (e) {
+        logErrorToFile(e, "main.js", "delete-video-record");
         return false;
     }
 });
@@ -606,22 +574,7 @@ ipcMain.handle("set-openai-key", async (_, openAiKey) => {
 ipcMain.handle("generate-ai-summary", async (_, videoId) => {
     try {
         let res = [];
-        let videoTranscript = await getTextTranscript(videoId);
-        if (!videoTranscript) {
-            return null;
-        }
-        let openAIKey = await store.get("settings.open_ai_key");
-        if (!openAIKey) {
-            return null;
-        }
-        let chunks = await splitToChunks(videoTranscript);
-        if (!chunks) {
-            return null;
-        }
-        let summary = await summariseCombinedSummaries(chunks, openAIKey);
-        if (!summary) {
-            return null;
-        }
+        let summary = await summariseVideo(videoId);
         summary.forEach((paragraph) => {
             res = [
                 ...res,
@@ -636,6 +589,7 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
         return res;
     } catch (e) {
         console.log("generate-ai-summary | e", e);
+        logErrorToFile(e, "main.js", "generate-ai-summary");
         return null;
     }
 });
@@ -643,7 +597,9 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
     try {
         const val = typeof p === "string" && p.length ? p : "/";
         store?.set("lastPath", val);
-    } catch {}
+    } catch (e) {
+        logErrorToFile(e, "main.js", "save-path");
+    }
 });
 
 // APP LIFECYCLE
@@ -651,6 +607,9 @@ ipcMain.handle("generate-ai-summary", async (_, videoId) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+    loadMainEnv();
+    // console.log("GEMINI_API_KEY", process.env.GEMINI_API_KEY);
+    initGeminiClient(process.env.GEMINI_API_KEY);
     if (process.platform === "darwin") {
         const iconPath = app.isPackaged
             ? path.join(process.resourcesPath, "assets", "icon.png")
@@ -671,11 +630,6 @@ app.whenReady().then(() => {
     PATHS.NOTES_DIR = path.join(PATHS.USER_DATA_BASE, "notes");
     PATHS.NOTES_ITEM_DIR = path.join(PATHS.USER_DATA_BASE, "notes_items");
     PATHS.SNAPSHOTS_DIR = path.join(PATHS.USER_DATA_BASE, "snapshots");
-    PATHS.TRANSCRIPTS_DIR = path.join(PATHS.USER_DATA_BASE, "transcripts");
-    PATHS.TIMESTAMPED_TRANSCRIPTS_DIR = path.join(
-        PATHS.USER_DATA_BASE,
-        "timestamped_transcripts"
-    );
 
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.

@@ -3,6 +3,7 @@ import { PATHS } from "../../const";
 import path from "node:path";
 import { NotesMetadata } from "../classes/Notes";
 import { PathLike } from "node:fs";
+import { logErrorToFile } from "./logging.utils";
 
 async function ensureDir(directory: PathLike) {
     await fsp.mkdir(directory, { recursive: true });
@@ -12,7 +13,8 @@ async function fileExists(directory: PathLike) {
     try {
         await fsp.access(directory);
         return true;
-    } catch {
+    } catch (e) {
+        logErrorToFile(e as Error, "files.utils.ts", "fileExists");
         return false;
     }
 }
@@ -33,7 +35,8 @@ async function getVideoMetadataById(videoId: string) {
         );
         const parsedMetadata = JSON.parse(metadataContent);
         return parsedMetadata;
-    } catch {
+    } catch (e) {
+        logErrorToFile(e as Error, "files.utils.ts", "getVideoMetadataById");
         return null;
     }
 }
@@ -50,6 +53,7 @@ async function getVideoPathById(videoId: string) {
         }
         return videoFileDirectory;
     } catch {
+        logErrorToFile(e as Error, "files.utils.ts", "getVideoPathById");
         return null;
     }
 }
@@ -72,6 +76,7 @@ async function getNotesMetadataById(notesId: string) {
         const parsedMetadata = JSON.parse(notesMetadataContent);
         return parsedMetadata;
     } catch (e) {
+        logErrorToFile(e as Error, "files.utils.ts", "getNotesMetadataById");
         return null;
     }
 }
@@ -94,6 +99,7 @@ async function getAllNotesMetadata() {
 
         return notesMetadataList;
     } catch (e) {
+        logErrorToFile(e as Error, "files.utils.ts", "getAllNotesMetadata");
         return null;
     }
 }

@@ -3,6 +3,7 @@ import path from "node:path";
 import fsp from "node:fs/promises";
 import { PATHS } from "../../const";
 import { ensureDir, fileExists } from "./files.utils";
+import { logErrorToFile } from "./logging.utils";
 
 async function setVideoThumbnail(videoId: string) {
     try {
@@ -24,6 +25,7 @@ async function setVideoThumbnail(videoId: string) {
 
         return null;
     } catch (e) {
+        logErrorToFile(e as Error, "thumbnails.utils.ts", "setVideoThumbnail");
         console.log("getSystemThumbnail | e", e);
         return null;
     }
@@ -42,6 +44,12 @@ async function deleteVideoThumbnail(videoId: string) {
         }
         return true;
     } catch (e) {
+        logErrorToFile(
+            e as Error,
+            "thumbnails.utils.ts",
+            "deleteVideoThumbnail"
+        );
+
         return;
     }
 }

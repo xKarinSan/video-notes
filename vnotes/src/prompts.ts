@@ -10,4 +10,7 @@ You are a helpful assistant who combines multiple chunk summaries into a single,
 {summaries}
 `;
 
-export { summariseChunkPrompt, combineSummariesPrompt };
+const videoSummaryPrompt = `
+ Extract and summarizes the key points from this video. It should be well-structured and coherent.
+ `;
+export { summariseChunkPrompt, combineSummariesPrompt, videoSummaryPrompt };

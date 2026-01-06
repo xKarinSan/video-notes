@@ -10,6 +10,7 @@ import {
 } from "./files.utils";
 import { Video } from "../classes/Video";
 import { downloadVideoMetadata } from "./youtubeVideo.utils";
+import { logErrorToFile } from "./logging.utils";
 
 async function createNotesMetadata(videoId: string, videoName: string) {
     try {
@@ -39,6 +40,7 @@ async function createNotesMetadata(videoId: string, videoName: string) {
         return notesMetadata;
     } catch (e) {
         console.log("createNotesMetadata | e", e);
+        logErrorToFile(e as Error, "notes.utils.ts", "createNotesMetadata");
         return null;
     }
 }
@@ -54,6 +56,7 @@ async function saveNotesMetadata(notesId, notesMetadata) {
         await fsp.writeFile(notesMetadataFilePath, notesMetadataString);
         return true;
     } catch (e) {
+        logErrorToFile(e as Error, "notes.utils.ts", "saveNotesMetadata");
         return false;
     }
 }
@@ -77,6 +80,7 @@ async function deleteNotesMetadata(notesIdList) {
         }
     } catch (e) {
         console.log("deleteNotesMetadata | e", e);
+        logErrorToFile(e as Error, "notes.utils.ts", "deleteNotesMetadata");
         return false;
     }
     return true;
@@ -120,6 +124,8 @@ async function deleteNotesMetadataById(noteId) {
         return false;
     } catch (e) {
         console.log("deleteNotesMetadataById | e", e);
+        logErrorToFile(e as Error, "notes.utils.ts", "deleteNotesMetadataById");
+
         return false;
     }
 }

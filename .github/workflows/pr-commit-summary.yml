@@ -1,0 +1,244 @@
+name: PR Commit Summary with Claude
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  summarize-commits:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to access all commits
+
+      - name: Get commit messages
+        id: commits
+        run: |
+          # Get all commit messages from the PR
+          COMMITS=$(git log --pretty=format:"%h - %s%n%b" ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+
+          # Escape for JSON and save to output
+          echo "messages<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Get PR info
+          echo "pr_title=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+          echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+
+      - name: Get file changes
+        id: files
+        run: |
+          # Get list of changed files
+          FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Count changes
+          ADDITIONS=$(git diff --numstat ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | awk '{added+=$1} END {print added}')
+          DELETIONS=$(git diff --numstat ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | awk '{deleted+=$2} END {print deleted}')
+
+          echo "additions=${ADDITIONS:-0}" >> $GITHUB_OUTPUT
+          echo "deletions=${DELETIONS:-0}" >> $GITHUB_OUTPUT
+
+      - name: Generate summary with Claude
+        id: claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Debug: Check if API key is set (without printing it)
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "❌ ERROR: ANTHROPIC_API_KEY is not set"
+            echo "error=ANTHROPIC_API_KEY secret is missing. Please add it to repository secrets." >> $GITHUB_OUTPUT
+            echo "debug_info=API key was not found in environment variables" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ API key is set (length: ${#ANTHROPIC_API_KEY} characters)"
+          fi
+
+          # Create the prompt for Claude
+          PROMPT="You are analyzing a pull request for a codebase. Generate a concise, professional summary.
+
+          PR Title: ${{ steps.commits.outputs.pr_title }}
+
+          Commits:
+          ${{ steps.commits.outputs.messages }}
+
+          Files Changed (${GITHUB_OUTPUT} files):
+          ${{ steps.files.outputs.changed_files }}
+
+          Stats: +${{ steps.files.outputs.additions }} -${{ steps.files.outputs.deletions }}
+
+          Please provide:
+          1. A brief overview (2-3 sentences) of what this PR does
+          2. Key changes by category (features, fixes, refactoring, etc.)
+          3. Notable file changes
+          4. Any potential impacts or areas that need attention
+
+          Format the response in markdown for a GitHub PR comment."
+
+          echo "📤 Calling Claude API..."
+
+          # Call Claude API with error handling
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" https://api.anthropic.com/v1/messages \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d @- <<JSON
+          {
+            "model": "claude-sonnet-4-5-20250929",
+            "max_tokens": 2048,
+            "messages": [{
+              "role": "user",
+              "content": $(echo "$PROMPT" | jq -Rs .)
+            }]
+          }
+          JSON
+          )
+
+          # Extract HTTP status code and response body
+          HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+          RESPONSE=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+          echo "📊 HTTP Status Code: $HTTP_CODE"
+
+          # Debug: Check HTTP response
+          if [ "$HTTP_CODE" != "200" ]; then
+            ERROR_TYPE=$(echo "$RESPONSE" | jq -r '.error.type // "unknown"')
+            ERROR_MESSAGE=$(echo "$RESPONSE" | jq -r '.error.message // "No error message provided"')
+
+            echo "❌ ERROR: API request failed"
+            echo "Error Type: $ERROR_TYPE"
+            echo "Error Message: $ERROR_MESSAGE"
+
+            echo "error=Claude API returned HTTP $HTTP_CODE: $ERROR_TYPE" >> $GITHUB_OUTPUT
+            echo "debug_info<<EOF" >> $GITHUB_OUTPUT
+            echo "HTTP Status: $HTTP_CODE" >> $GITHUB_OUTPUT
+            echo "Error Type: $ERROR_TYPE" >> $GITHUB_OUTPUT
+            echo "Error Message: $ERROR_MESSAGE" >> $GITHUB_OUTPUT
+            echo "Model Used: claude-sonnet-4-5-20250929" >> $GITHUB_OUTPUT
+            echo "API Endpoint: https://api.anthropic.com/v1/messages" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+
+            exit 1
+          fi
+
+          # Debug: Check response structure
+          echo "🔍 Checking response structure..."
+          if ! echo "$RESPONSE" | jq -e '.content[0].text' > /dev/null 2>&1; then
+            echo "❌ ERROR: Unexpected response structure"
+            echo "Response preview: $(echo "$RESPONSE" | jq -c '.' | head -c 200)"
+
+            echo "error=Unexpected API response structure" >> $GITHUB_OUTPUT
+            echo "debug_info=Response does not contain expected .content[0].text field" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Extract the summary from Claude's response
+          SUMMARY=$(echo "$RESPONSE" | jq -r '.content[0].text')
+
+          if [ -z "$SUMMARY" ] || [ "$SUMMARY" = "null" ]; then
+            echo "❌ ERROR: Empty summary received"
+            echo "error=Claude returned an empty response" >> $GITHUB_OUTPUT
+            echo "debug_info=API call succeeded but summary text was empty or null" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "✅ Successfully generated summary (${#SUMMARY} characters)"
+
+          # Save to output
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post summary as PR comment
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          CLAUDE_SUMMARY: ${{ steps.claude.outputs.summary }}
+          CLAUDE_ERROR: ${{ steps.claude.outputs.error }}
+          CLAUDE_DEBUG: ${{ steps.claude.outputs.debug_info }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Check if the Claude step failed
+            const claudeStepFailed = '${{ steps.claude.outcome }}' !== 'success';
+
+            let summary;
+            if (claudeStepFailed) {
+              // Post error information if Claude step failed
+              const error = process.env.CLAUDE_ERROR || 'Unknown error occurred';
+              const debugInfo = process.env.CLAUDE_DEBUG || 'No debug information available';
+
+              summary = `## ❌ Failed to Generate AI Summary
+
+            **Error:** ${error}
+
+            <details>
+            <summary>Debug Information</summary>
+
+            \`\`\`
+            ${debugInfo}
+            \`\`\`
+
+            **What to check:**
+            - Verify that \`ANTHROPIC_API_KEY\` secret is set in repository settings
+            - Check that the API key is valid and has sufficient credits
+            - Review the workflow run logs for more details
+
+            </details>
+
+            ---
+            *Attempted with Claude Sonnet 4.5*`;
+            } else {
+              // Post successful summary
+              const claudeSummary = process.env.CLAUDE_SUMMARY || 'No summary generated';
+
+              summary = `## 🤖 AI-Generated PR Summary
+
+            ${claudeSummary}
+
+            ---
+            *Generated by Claude Sonnet 4.5*`;
+            }
+
+            // Check if we already posted a summary
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('AI-Generated PR Summary')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: summary
+              });
+              console.log('✅ Updated existing comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: summary
+              });
+              console.log('✅ Created new comment');
+            }

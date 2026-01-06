@@ -242,6 +242,7 @@ function CurrentNotesPage() {
             if (!currentVideo || !currentVideo.id) return;
             setIsGeneratingSummary(true);
             const res = await window.notes.generateAISummary(currentVideo.id);
+            console.log("generateAiSummary | res",res)
             setIsGeneratingSummary(false);
             if (!(res && res.length > 0)) {
                 throw new Error(

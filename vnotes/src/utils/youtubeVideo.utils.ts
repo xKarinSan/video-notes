@@ -6,8 +6,10 @@ import { promises as pfs } from "fs";
 import { pipeline } from "node:stream/promises";
 import { PATHS } from "../../const";
 import { ensureDir, fileExists, getVideoMetadataById } from "./files.utils";
+import { logErrorToFile } from "./logging.utils";
+import { Video } from "../classes/Video";
 
-function getYoutubeVideoId(url) {
+function getYoutubeVideoId(url: string) {
     try {
         const parsed = new URL(url);
         // Match main YouTube domains
@@ -18,7 +20,7 @@ function getYoutubeVideoId(url) {
             if (!parsed.pathname === "/watch" && parsed.searchParams.has("v")) {
                 return null;
             }
-            return parsed.searchParams.get("v").replace(/^\//, "");
+            return parsed.searchParams?.get("v").replace(/^\//, "");
         }
 
         // Match youtu.be short links
@@ -32,11 +34,12 @@ function getYoutubeVideoId(url) {
         return null;
     } catch (e) {
         console.log("e", e);
+        logErrorToFile(e as Error, "youtubeVideoUtils.ts", "getYoutubeVideoId");
         return null;
     }
 }
 
-async function downloadVideoMetadata(videoMetadata, videoId) {
+async function downloadVideoMetadata(videoMetadata: Video, videoId: string) {
     try {
         let videoMetadataFilePath = path.join(
             PATHS.METADATA_DIR,
@@ -45,12 +48,22 @@ async function downloadVideoMetadata(videoMetadata, videoId) {
         let json_string = JSON.stringify(videoMetadata, null, 2);
         await fsp.writeFile(videoMetadataFilePath, json_string);
         return true;
-    } catch {
+    } catch (e) {
+        logErrorToFile(
+            e as Error,
+            "youtubeVideoUtils.ts",
+            "downloadVideoMetadata"
+        );
+
         return false;
     }
 }
 
-async function downloadYoutubeVideoFile(innertube, youtubeVideoId, videoId) {
+async function downloadYoutubeVideoFile(
+    innertube,
+    youtubeVideoId,
+    videoId: string
+) {
     await ensureDir(PATHS.VIDEOS_DIR);
     const videoPath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
     await fs.promises.mkdir(PATHS.VIDEOS_DIR, { recursive: true });
@@ -67,11 +80,16 @@ async function downloadYoutubeVideoFile(innertube, youtubeVideoId, videoId) {
         return true;
     } catch (err) {
         console.log("downloadYoutubeVideoFile | err", err);
+        logErrorToFile(
+            err as Error,
+            "youtubeVideoUtils.ts",
+            "downloadYoutubeVideoFile"
+        );
         return false;
     }
 }
 
-async function downloadUploadedVideoFile(videoBytes, videoId) {
+async function downloadUploadedVideoFile(videoBytes, videoId: string) {
     try {
         /*
 1. Get the bytes
@@ -83,11 +101,16 @@ async function downloadUploadedVideoFile(videoBytes, videoId) {
         return true;
     } catch (e) {
         console.log("downloadUploadedVideoFile error", e);
+        logErrorToFile(
+            e as Error,
+            "youtubeVideoUtils.ts",
+            "downloadUploadedVideoFile"
+        );
         return false;
     }
 }
 
-async function deleteVideoMetadata(videoId) {
+async function deleteVideoMetadata(videoId: string) {
     try {
         const videoMetadataFilePath = path.join(
             PATHS.METADATA_DIR,
@@ -97,24 +120,37 @@ async function deleteVideoMetadata(videoId) {
             await fsp.unlink(videoMetadataFilePath);
         }
         return true;
-    } catch {
+    } catch (e) {
+        logErrorToFile(
+            e as Error,
+            "youtubeVideoUtils.ts",
+            "deleteVideoMetadata"
+        );
         return false;
     }
 }
 
-async function deleteVideoFile(videoId) {
+async function deleteVideoFile(videoId: string) {
     try {
         const videoFilePath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
         if (await fileExists(videoFilePath)) {
             await fsp.unlink(videoFilePath);
         }
+        const compressedVideoFilePath = path.join(
+            PATHS.COMPRESSED_VIDEOS_DIR,
+            `${videoId}.mp4`
+        );
+        if (await fileExists(compressedVideoFilePath)) {
+            await fsp.unlink(compressedVideoFilePath);
+        }
         return true;
     } catch (e) {
+        logErrorToFile(e as Error, "youtubeVideoUtils.ts", "deleteVideoFile");
         return false;
     }
 }
 
-async function deleteVideoRecord(videoId) {
+async function deleteVideoRecord(videoId: string) {
     try {
         const videoMetadata = await getVideoMetadataById(videoId);
         if (!videoMetadata) return false;
@@ -129,6 +165,7 @@ async function deleteVideoRecord(videoId) {
         return true;
     } catch (e) {
         console.error("deleteVideoRecord error:", e);
+        logErrorToFile(e as Error, "youtubeVideoUtils.ts", "deleteVideoRecord");
         return false;
     }
 }
