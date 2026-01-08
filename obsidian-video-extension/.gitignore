@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build
+main.js
+*.js.map
+
+# Editor
+.DS_Store
+.vscode/
+.idea/
+
+# npm
+package-lock.json
+yarn.lock

@@ -1,0 +1,10 @@
+{
+  "id": "video-notes-extension",
+  "name": "Video Notes Extension",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Extract video summaries and snapshots at specific timestamps",
+  "author": "Video Notes Team",
+  "authorUrl": "https://github.com/xKarinSan/video-notes",
+  "isDesktopOnly": false
+}
