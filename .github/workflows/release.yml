@@ -52,6 +52,23 @@ jobs:
 
       - name: Install deps
         run: npm ci
+        env:
+          YOUTUBE_DL_SKIP_DOWNLOAD: 1
+
+      - name: Download yt-dlp binary
+        shell: bash
+        run: |
+          YT_DLP_DIR="node_modules/youtube-dl-exec/bin"
+          mkdir -p "$YT_DLP_DIR"
+          RELEASE_URL=$(curl -sf -H "Authorization: Bearer $GITHUB_TOKEN" \
+            https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest \
+            | node -e "const d=require('fs').readFileSync(0,'utf8');const r=JSON.parse(d);
+              const isWin=process.platform==='win32';
+              const name=isWin?'yt-dlp.exe':'yt-dlp';
+              const a=r.assets.find(x=>x.name===name);
+              console.log(a.browser_download_url)")
+          curl -sfL "$RELEASE_URL" -o "$YT_DLP_DIR/$(basename "$RELEASE_URL")"
+          chmod +x "$YT_DLP_DIR"/*
 
       - name: Setup signing keychain (macOS)
         if: startsWith(matrix.os, 'macos')
