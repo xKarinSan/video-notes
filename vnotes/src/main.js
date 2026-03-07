@@ -8,11 +8,10 @@ import started from "electron-squirrel-startup";
 import Store from "electron-store";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
-import { Innertube } from "youtubei.js";
-
 import {
     getYoutubeVideoId,
     downloadVideoMetadata,
+    getYoutubeVideoMetadata,
     downloadYoutubeVideoFile,
     downloadUploadedVideoFile,
     deleteVideoMetadata,
@@ -75,7 +74,6 @@ if (started) {
 }
 let store = null;
 let mainWindow = null;
-let innertube = null;
 
 const createWindow = async () => {
     const iconPath = app.isPackaged
@@ -84,10 +82,6 @@ const createWindow = async () => {
 
     // Create the browser window.
     store = new Store();
-    innertube = await Innertube.create({
-        retrieve_player: true,
-        player_id: "0004de42",
-    });
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
@@ -162,7 +156,7 @@ ipcMain.handle("get-all-metadata", async () => {
 
 ipcMain.handle(
     "add-video-file",
-    async (_, videoBytes, videoFileName, videoFileDuration) => {
+    async (_, filePath, videoFileName, videoFileDuration) => {
         try {
             console.log("add-video-file");
             let res = {};
@@ -173,11 +167,10 @@ ipcMain.handle(
 
             const videoId = randomUUID();
 
-            // download the video itself
-            const isVideoDownloaded = await downloadUploadedVideoFile(
-                videoBytes,
-                videoId
-            );
+            // copy the video file directly (no IPC byte transfer)
+            const destPath = path.join(PATHS.VIDEOS_DIR, `${videoId}.mp4`);
+            await fsp.copyFile(filePath, destPath);
+            const isVideoDownloaded = true;
             if (!isVideoDownloaded) {
                 throw Error("Video download failed!");
             }
@@ -275,64 +268,56 @@ ipcMain.handle("add-youtube-video", async (_, videoUrl) => {
         }
 
         videoId = randomUUID();
-        const info = await innertube.getInfo(youtubeVideoId);
-        const { basic_info, primary_info } = info;
+        const videoUrlFull = `https://www.youtube.com/watch?v=${youtubeVideoId}`;
+        const info = await getYoutubeVideoMetadata(videoUrlFull);
         const {
             id: originalVideoId,
             title,
-            short_description: description,
+            description,
             duration,
-            // video_url,
-            author: opName,
+            uploader: opName,
             thumbnail,
-        } = basic_info;
+            upload_date: uploadDateRaw,
+        } = info;
 
-        // get the upload date
-        const { published } = primary_info;
-        const { text: uploadDateString } = published;
-        let dateUploaded = new Date(uploadDateString).getTime();
+        // yt-dlp returns upload_date as YYYYMMDD
+        let dateUploaded = new Date(
+            `${uploadDateRaw.slice(0, 4)}-${uploadDateRaw.slice(4, 6)}-${uploadDateRaw.slice(6, 8)}`
+        ).getTime();
 
-        console.log("BEFORE download call");
-        const isVideoDownloaded = await downloadYoutubeVideoFile(
-            innertube,
-            originalVideoId,
-            videoId
-        );
+        // Run video download and transcript fetch in parallel
+        const downloadPromise = downloadYoutubeVideoFile(videoUrlFull, videoId);
 
-        console.log("AFTER download call");
-        let savedTranscript = false;
-        try {
-            console.log("add-youtube-video | try");
-            let transcript = [];
+        const transcriptPromise = (async () => {
+            try {
+                const transcript = await fetchTranscript(youtubeVideoId);
+                return await writeYoutubeTranscript(videoId, transcript);
+            } catch (e) {
+                console.log("add-youtube-video | transcript fallback", e);
+                // Whisper fallback needs the video file, so wait for download first
+                await downloadPromise;
+                const openAIKey = await store.get("settings.open_ai_key");
+                const transcriptText = await writeTranscriptFallback(
+                    videoId,
+                    openAIKey
+                );
+                if (!transcriptText) return false;
+                return await writeFallbackTranscript(videoId, transcriptText);
+            }
+        })();
 
-            await fetchTranscript(youtubeVideoId).then((res) => {
-                transcript = res;
-            });
-            savedTranscript = await writeYoutubeTranscript(videoId, transcript);
-        } catch (e) {
-            console.log("add-youtube-video | e | before fallback", e);
-            const openAIKey = await store.get("settings.open_ai_key");
-            const transcriptText = await writeTranscriptFallback(
-                videoId,
-                openAIKey
-            );
-            savedTranscript = await writeFallbackTranscript(
-                videoId,
-                transcriptText
-            );
-        }
-        console.log("add-youtube-video | savedTranscript");
-        console.log("add-youtube-video-success");
+        const [isVideoDownloaded, savedTranscript] = await Promise.all([
+            downloadPromise,
+            transcriptPromise,
+        ]);
 
-        // download the metadata
-        const largestThumbnail = thumbnail[0];
         videoMetadata = {
             id: videoId,
-            videoUrl: `https://www.youtube.com/watch?v=${originalVideoId}`,
+            videoUrl: videoUrlFull,
             name: title,
             description: description,
             dateExtracted: Date.now(),
-            thumbnail: largestThumbnail.url,
+            thumbnail: thumbnail,
             dateUploaded,
             opName: opName,
             duration,

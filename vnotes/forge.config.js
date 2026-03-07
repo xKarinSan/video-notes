@@ -7,7 +7,7 @@ module.exports = {
     packagerConfig: {
         asar: {
             unpack: "**/*.node", // native modules should not be inside asar
-            unpackDir: "{assets,node_modules/ffmpeg-static}",
+            unpackDir: "{assets,node_modules/ffmpeg-static,node_modules/youtube-dl-exec}",
         },
         ignore: [
             /^\/\.git($|\/)/,
@@ -22,6 +22,7 @@ module.exports = {
             /^\/examples?($|\/)/,
             /(^|\/)\.env(\..*)?$/,
             /^\/README.*$/i,
+            /^\/CLAUDE\.md$/i,
             /^\/CHANGELOG.*$/i,
             /\.map$/,
             /(^|\/)vite\..*\.mjs$/,
@@ -44,6 +45,9 @@ module.exports = {
                 "entitlements.plist"
             ),
             "signature-flags": "library",
+            optionsForFile: (filePath) => ({
+                entitlements: path.resolve(__dirname, "entitlements.plist"),
+            }),
         },
 
         osxNotarize: {

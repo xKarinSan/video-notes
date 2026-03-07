@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Video } from "../classes/Video";
 import { toast } from "react-toastify";
 import { FileUploader } from "react-drag-drop-files";
@@ -8,8 +9,10 @@ type AddNewVideoProps = {
 };
 
 function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
+    const navigate = useNavigate();
     const [youtubeVideoUrl, setYoutubeVideoURL] = useState("");
     const [uploadedFileUrl, setUploadedFileUrl] = useState("");
+    const [uploadedFilePath, setUploadedFilePath] = useState("");
     const [uploadedFileName, setUploadedFileName] = useState("");
     const [uploadedVideoThumbnailUrl, setUploadedVideoThumbnailUrl] =
         useState("");
@@ -32,6 +35,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                     onVideoAdded?.(videoMetadata);
                     setYoutubeVideoURL("");
                     toast.success("Video added!");
+                    navigate(`/videos/${videoMetadata.id}`);
                 }
                 return videoMetadata;
             } else {
@@ -47,6 +51,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
 
     function cancelUploadFile() {
         setUploadedFileUrl("");
+        setUploadedFilePath("");
         setUploadedFileName("");
         setUploadedVideoThumbnailUrl("");
         setUploadVideoDuration(-1);
@@ -76,7 +81,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
             // just the metadata will do
             // thumbnail is also needed
             const res = await window.api.uploadVideoFile(
-                uploadedFileUrl,
+                uploadedFilePath,
                 uploadedFileName,
                 uploadVideoDuration
             );
@@ -86,6 +91,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                 videoMetadata.thumbnail = uploadedVideoThumbnailUrl;
                 onVideoAdded?.(videoMetadata);
                 setUploadedFileUrl("");
+                setUploadedFilePath("");
                 setUploadedFileName("");
                 setUploadedVideoThumbnailUrl("");
                 if (fileUploadRef.current) {
@@ -97,6 +103,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                     videoRef.current.load();
                 }
                 toast.success("Video added!");
+                navigate(`/videos/${videoMetadata.id}`);
                 return videoMetadata;
             } else {
                 throw new Error("Video failed to add");
@@ -116,6 +123,7 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
         if (file == null) return;
         const tempUrl = URL.createObjectURL(currFile);
         setUploadedFileUrl(tempUrl);
+        setUploadedFilePath(window.api.getFilePath(currFile));
         setUploadedFileName(currFile.name);
         toast.success("File successfully uploaded!");
     }
@@ -213,6 +221,16 @@ function AddNewVideo({ onVideoAdded }: AddNewVideoProps) {
                     </div>
                 </div>
             </div>
+
+            {isUploading && (
+                <dialog className="modal modal-open">
+                    <div className="modal-box flex flex-col items-center gap-4">
+                        <span className="loading loading-spinner loading-lg text-primary"></span>
+                        <p className="text-lg font-semibold">Uploading...</p>
+                    </div>
+                    <div className="modal-backdrop"></div>
+                </dialog>
+            )}
         </div>
     );
 }

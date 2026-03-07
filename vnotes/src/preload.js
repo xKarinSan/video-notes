@@ -1,6 +1,6 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, webUtils } = require("electron");
 
 async function dictToBufferMap(dict) {
     const entries = await Promise.all(
@@ -35,6 +35,7 @@ function bufferDictToUrlMap(dict) {
 }
 
 contextBridge.exposeInMainWorld("api", {
+    getFilePath: (file) => webUtils.getPathForFile(file),
     listMetadata: async () => {
         let allMetadata = await ipcRenderer.invoke("get-all-metadata");
         allMetadata.forEach((item) => {
@@ -55,11 +56,10 @@ contextBridge.exposeInMainWorld("api", {
         return await ipcRenderer.invoke("add-youtube-video", videoUrl);
     },
 
-    uploadVideoFile: async (videoFileUrl, videoFileName, videoFileDuration) => {
-        const videoBytes = await convertBlobToBytes(videoFileUrl);
+    uploadVideoFile: async (filePath, videoFileName, videoFileDuration) => {
         return await ipcRenderer.invoke(
             "add-video-file",
-            videoBytes,
+            filePath,
             videoFileName,
             videoFileDuration
         );

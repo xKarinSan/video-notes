@@ -5,7 +5,17 @@ export default defineConfig({
     build: {
         sourcemap: true,
         rollupOptions: {
-            external: ["ffmpeg-static"],
+            external: [
+                "ffmpeg-static",
+                "youtube-transcript-plus",
+                "update-electron-app",
+                "electron-squirrel-startup",
+                "youtube-dl-exec",
+                "openai",
+                "@langchain/openai",
+                "@langchain/core/prompts",
+                "@langchain/textsplitters",
+            ],
         },
     },
 });
