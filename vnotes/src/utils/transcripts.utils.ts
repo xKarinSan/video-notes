@@ -119,7 +119,10 @@ async function extractAudio(videoPath: string, videoId: string) {
             tempPath,
         ];
 
-        const proc = spawn(ffmpegPath as string, args, { stdio: "inherit" });
+        const proc = spawn(ffmpegPath as string, args, {
+            stdio: "pipe",
+            windowsHide: true,
+        });
         proc.on("close", (code) => {
             if (code === 0) {
                 // successful
